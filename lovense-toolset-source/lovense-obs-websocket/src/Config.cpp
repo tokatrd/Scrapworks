@@ -1,0 +1,402 @@
+/*
+obs-websocket
+Copyright (C) 2016-2017	Stéphane Lepin <stephane.lepin@gmail.com>
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program. If not, see <https://www.gnu.org/licenses/>
+*/
+
+#include <obs-frontend-api.h>
+
+
+#if 0
+#include <QtWidgets/QSystemTrayIcon>
+#include <QtWidgets/QMainWindow>
+#include <QtWidgets/QInputDialog>
+#include <QtWidgets/QMessageBox>
+#endif
+
+
+#define SECTION_NAME "WebsocketAPI"
+#define PARAM_ENABLE "ServerEnabled"
+#define PARAM_PORT "ServerPort"
+#define PARAM_LOCKTOIPV4 "LockToIPv4"
+#define PARAM_DEBUG "DebugEnabled"
+#define PARAM_ALERT "AlertsEnabled"
+#define PARAM_AUTHREQUIRED "AuthRequired"
+#define PARAM_SECRET "AuthSecret"
+#define PARAM_SALT "AuthSalt"
+
+#define GLOBAL_AUTH_SETUP_PROMPTED "AuthSetupPrompted"
+
+#include "Utils.h"
+#include "WSServer.h"
+
+#include "Config.h"
+
+#ifndef DISABLE_QT
+#define QT_TO_UTF8(str) str.toUtf8().constData()
+#else
+#define QT_TO_UTF8(s) s.c_str()
+#endif
+
+Config::Config() :
+	ServerEnabled(true),
+#ifdef DEF_TOOLSETS
+	ServerPort(20996),
+#else
+	ServerPort(20896),
+#endif	
+	LockToIPv4(false),
+	DebugEnabled(true),
+	AlertsEnabled(true),
+	AuthRequired(false),
+	Secret(""),
+	Salt(""),
+	SettingsLoaded(false)
+{
+	//qsrand(QTime::currentTime().msec());
+
+	SetDefaults();
+	SessionChallenge = GenerateSalt();
+
+	obs_frontend_add_event_callback(OnFrontendEvent, this);
+}
+
+Config::~Config()
+{
+	obs_frontend_remove_event_callback(OnFrontendEvent, this);
+}
+
+void Config::Load()
+{
+	config_t* obsConfig = GetConfigStore();
+
+	ServerEnabled = config_get_bool(obsConfig, SECTION_NAME, PARAM_ENABLE);
+	//ServerPort = config_get_uint(obsConfig, SECTION_NAME, PARAM_PORT);
+	LockToIPv4 = config_get_bool(obsConfig, SECTION_NAME, PARAM_LOCKTOIPV4);
+
+	DebugEnabled = config_get_bool(obsConfig, SECTION_NAME, PARAM_DEBUG);
+	AlertsEnabled = config_get_bool(obsConfig, SECTION_NAME, PARAM_ALERT);
+
+	AuthRequired = config_get_bool(obsConfig, SECTION_NAME, PARAM_AUTHREQUIRED);
+	Secret = config_get_string(obsConfig, SECTION_NAME, PARAM_SECRET);
+	Salt = config_get_string(obsConfig, SECTION_NAME, PARAM_SALT);
+}
+
+void Config::Save()
+{
+	config_t* obsConfig = GetConfigStore();
+
+	config_set_bool(obsConfig, SECTION_NAME, PARAM_ENABLE, ServerEnabled);
+	config_set_uint(obsConfig, SECTION_NAME, PARAM_PORT, ServerPort);
+	config_set_bool(obsConfig, SECTION_NAME, PARAM_LOCKTOIPV4, LockToIPv4);
+
+	config_set_bool(obsConfig, SECTION_NAME, PARAM_DEBUG, DebugEnabled);
+	config_set_bool(obsConfig, SECTION_NAME, PARAM_ALERT, AlertsEnabled);
+
+	config_set_bool(obsConfig, SECTION_NAME, PARAM_AUTHREQUIRED, AuthRequired);
+	config_set_string(obsConfig, SECTION_NAME, PARAM_SECRET,
+		QT_TO_UTF8(Secret));
+	config_set_string(obsConfig, SECTION_NAME, PARAM_SALT,
+		QT_TO_UTF8(Salt));
+
+	config_save(obsConfig);
+}
+
+void Config::SetDefaults()
+{
+	// OBS Config defaults
+	config_t* obsConfig = GetConfigStore();
+	if (obsConfig) {
+		config_set_default_bool(obsConfig,
+			SECTION_NAME, PARAM_ENABLE, ServerEnabled);
+		config_set_default_uint(obsConfig,
+			SECTION_NAME, PARAM_PORT, ServerPort);
+		config_set_default_bool(obsConfig,
+			SECTION_NAME, PARAM_LOCKTOIPV4, LockToIPv4);
+
+		config_set_default_bool(obsConfig,
+			SECTION_NAME, PARAM_DEBUG, DebugEnabled);
+		config_set_default_bool(obsConfig,
+			SECTION_NAME, PARAM_ALERT, AlertsEnabled);
+
+		config_set_default_bool(obsConfig,
+			SECTION_NAME, PARAM_AUTHREQUIRED, AuthRequired);
+		config_set_default_string(obsConfig,
+			SECTION_NAME, PARAM_SECRET, QT_TO_UTF8(Secret));
+		config_set_default_string(obsConfig,
+			SECTION_NAME, PARAM_SALT, QT_TO_UTF8(Salt));
+	}
+}
+
+config_t* Config::GetConfigStore()
+{
+	return obs_frontend_get_profile_config();
+}
+
+void Config::MigrateFromGlobalSettings()
+{
+	config_t* source = obs_frontend_get_global_config();
+	config_t* destination = obs_frontend_get_profile_config();
+
+	if(config_has_user_value(source, SECTION_NAME, PARAM_ENABLE)) {
+		bool value = config_get_bool(source, SECTION_NAME, PARAM_ENABLE);
+		config_set_bool(destination, SECTION_NAME, PARAM_ENABLE, value);
+
+		config_remove_value(source, SECTION_NAME, PARAM_ENABLE);
+	}
+
+	if(config_has_user_value(source, SECTION_NAME, PARAM_PORT)) {
+		uint64_t value = config_get_uint(source, SECTION_NAME, PARAM_PORT);
+		config_set_uint(destination, SECTION_NAME, PARAM_PORT, value);
+
+		config_remove_value(source, SECTION_NAME, PARAM_PORT);
+	}
+	
+	if(config_has_user_value(source, SECTION_NAME, PARAM_LOCKTOIPV4)) {
+		bool value = config_get_bool(source, SECTION_NAME, PARAM_LOCKTOIPV4);
+		config_set_bool(destination, SECTION_NAME, PARAM_LOCKTOIPV4, value);
+
+		config_remove_value(source, SECTION_NAME, PARAM_LOCKTOIPV4);
+	}
+
+	if(config_has_user_value(source, SECTION_NAME, PARAM_DEBUG)) {
+		bool value = config_get_bool(source, SECTION_NAME, PARAM_DEBUG);
+		config_set_bool(destination, SECTION_NAME, PARAM_DEBUG, value);
+
+		config_remove_value(source, SECTION_NAME, PARAM_DEBUG);
+	}
+
+	if(config_has_user_value(source, SECTION_NAME, PARAM_ALERT)) {
+		bool value = config_get_bool(source, SECTION_NAME, PARAM_ALERT);
+		config_set_bool(destination, SECTION_NAME, PARAM_ALERT, value);
+
+		config_remove_value(source, SECTION_NAME, PARAM_ALERT);
+	}
+
+	if(config_has_user_value(source, SECTION_NAME, PARAM_AUTHREQUIRED)) {
+		bool value = config_get_bool(source, SECTION_NAME, PARAM_AUTHREQUIRED);
+		config_set_bool(destination, SECTION_NAME, PARAM_AUTHREQUIRED, value);
+
+		config_remove_value(source, SECTION_NAME, PARAM_AUTHREQUIRED);
+	}
+
+	if(config_has_user_value(source, SECTION_NAME, PARAM_SECRET)) {
+		const char* value = config_get_string(source, SECTION_NAME, PARAM_SECRET);
+		config_set_string(destination, SECTION_NAME, PARAM_SECRET, value);
+
+		config_remove_value(source, SECTION_NAME, PARAM_SECRET);
+	}
+
+	if(config_has_user_value(source, SECTION_NAME, PARAM_SALT)) {
+		const char* value = config_get_string(source, SECTION_NAME, PARAM_SALT);
+		config_set_string(destination, SECTION_NAME, PARAM_SALT, value);
+
+		config_remove_value(source, SECTION_NAME, PARAM_SALT);
+	}
+
+	config_save(destination);
+}
+
+QString Config::GenerateSalt()
+{
+	// Generate 32 random chars
+	const size_t randomCount = 32;
+#ifndef DISABLE_QT
+	QByteArray randomChars;
+	for (size_t i = 0; i < randomCount; i++) {
+		char value = (char)QRandomGenerator::global()->bounded(0, 127);
+		randomChars.append(value);
+	}
+
+	// Convert the 32 random chars to a base64 string
+	QString salt = randomChars.toBase64();
+
+	return salt;
+#else
+	std::string salt;
+	std::default_random_engine random(time(NULL));
+	std::uniform_int_distribution<int> dist(1, 127);
+
+	for (size_t i = 0; i < randomCount; i++) {
+		char value = (char)(dist(random));
+		salt.push_back(value);
+	}
+
+	return base64_encode(salt.c_str(), salt.size());
+#endif
+}
+
+QString Config::GenerateSecret(QString password, QString salt)
+{
+	// Concatenate the password and the salt
+	QString passAndSalt = "";
+	passAndSalt += password;
+	passAndSalt += salt;
+
+#ifndef DISABLE_QT
+	// Generate a SHA256 hash of the password and salt
+	auto challengeHash = QCryptographicHash::hash(
+		passAndSalt.toUtf8(),
+		QCryptographicHash::Algorithm::Sha256
+	);
+
+	// Encode SHA256 hash to Base64
+	QString challenge = challengeHash.toBase64();
+#else
+	QString challenge = passAndSalt;
+#endif // !DISABLE_QT
+
+
+
+	
+
+	return challenge;
+}
+
+void Config::SetPassword(QString password)
+{
+	QString newSalt = GenerateSalt();
+	QString newChallenge = GenerateSecret(password, newSalt);
+
+	this->Salt = newSalt;
+	this->Secret = newChallenge;
+}
+
+bool Config::CheckAuth(QString response)
+{
+	// Concatenate auth secret with the challenge sent to the user
+	QString challengeAndResponse = "";
+	challengeAndResponse += Secret;
+	challengeAndResponse += SessionChallenge;
+
+#ifndef DISABLE_QT
+	// Generate a SHA256 hash of challengeAndResponse
+	auto hash = QCryptographicHash::hash(
+		challengeAndResponse.toUtf8(),
+		QCryptographicHash::Algorithm::Sha256
+	);
+
+	// Encode the SHA256 hash to Base64
+	QString expectedResponse = hash.toBase64();
+#else
+	QString expectedResponse = challengeAndResponse;
+#endif
+
+	bool authSuccess = false;
+	if (response == expectedResponse) {
+		SessionChallenge = GenerateSalt();
+		authSuccess = true;
+	}
+
+	return authSuccess;
+}
+
+void Config::OnFrontendEvent(enum obs_frontend_event event, void* param)
+{
+	auto config = reinterpret_cast<Config*>(param);
+
+	if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGED) {
+#if 0
+		obs_frontend_push_ui_translation(obs_module_get_string);
+		QString startMessage = QObject::tr("OBSWebsocket.ProfileChanged.Started");
+		QString stopMessage = QObject::tr("OBSWebsocket.ProfileChanged.Stopped");
+		QString restartMessage = QObject::tr("OBSWebsocket.ProfileChanged.Restarted");
+		obs_frontend_pop_ui_translation();
+#endif
+
+		bool previousEnabled = config->ServerEnabled;
+		uint64_t previousPort = config->ServerPort;
+		bool previousLock = config->LockToIPv4;
+
+		config->SetDefaults();
+		config->Load();
+
+		if (config->ServerEnabled != previousEnabled || config->ServerPort != previousPort || config->LockToIPv4 != previousLock) {
+			auto server = GetServer();
+			server->stop();
+
+			if (config->ServerEnabled) {
+				server->start(config->ServerPort, config->LockToIPv4);
+
+#if 0
+				if (previousEnabled != config->ServerEnabled) {
+					Utils::SysTrayNotify(startMessage, QSystemTrayIcon::MessageIcon::Information);
+				} else {
+					Utils::SysTrayNotify(restartMessage, QSystemTrayIcon::MessageIcon::Information);
+				}
+#endif
+			} else {
+#if 0
+				Utils::SysTrayNotify(stopMessage, QSystemTrayIcon::MessageIcon::Information);
+#endif
+			}
+		}
+	}
+	else if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
+		//FirstRunPasswordSetup();
+	}
+}
+
+void Config::FirstRunPasswordSetup()
+{
+	// check if we already showed the auth setup prompt to the user, independently of the current settings (tied to the current profile)
+	config_t* globalConfig = obs_frontend_get_global_config();
+	bool alreadyPrompted = config_get_bool(globalConfig, SECTION_NAME, GLOBAL_AUTH_SETUP_PROMPTED);
+	if (alreadyPrompted) {
+		return;
+	}
+
+	// lift the flag up and save it
+	config_set_bool(globalConfig, SECTION_NAME, GLOBAL_AUTH_SETUP_PROMPTED, true);
+	config_save(globalConfig);
+
+	// check if the password is already set
+	auto config = GetConfig();
+	if (!config) {
+		return;
+	}
+
+	if (!(config->Secret.isEmpty()) && !(config->Salt.isEmpty())) {
+		return;
+	}
+
+#if 0
+	obs_frontend_push_ui_translation(obs_module_get_string);
+	QString dialogTitle = QObject::tr("OBSWebsocket.InitialPasswordSetup.Title");
+	QString dialogText = QObject::tr("OBSWebsocket.InitialPasswordSetup.Text");
+	QString dismissedText = QObject::tr("OBSWebsocket.InitialPasswordSetup.DismissedText");
+	obs_frontend_pop_ui_translation();
+#endif
+
+	//cita:modify do not use dialog setting, only use default setting!
+	//config->SetPassword("123456");
+	config->Save();
+	return;
+
+#if 0
+	auto mainWindow = reinterpret_cast<QMainWindow*>(
+		obs_frontend_get_main_window()
+	);
+	
+	QMessageBox::StandardButton response = QMessageBox::question(mainWindow, dialogTitle, dialogText);
+	if (response == QMessageBox::Yes) {
+		ShowPasswordSetting();
+	}
+	else {
+		// tell the user they still can set the password later in our settings dialog
+		QMessageBox::information(mainWindow, dialogTitle, dismissedText);
+	}
+#endif
+}
