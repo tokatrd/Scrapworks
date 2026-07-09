@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BRIDGE_DIR="$HOME/Documents/lovense-equinox-bridge"
-PROJECT_SRC="/tmp/opencode/lovense-equinox-bridge"
+PROJECT_SRC="$HOME/Documents/Projects/lovense-shenanigans/lovense-equinox-bridge"
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'

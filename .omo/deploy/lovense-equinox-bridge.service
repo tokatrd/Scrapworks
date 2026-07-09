@@ -1,0 +1,15 @@
+[Unit]
+Description=Lovense Equinox Bridge — BLE to Lovense API bridge for Magic Motion Equinox
+After=bluetooth.target
+Wants=bluetooth.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/toka/Documents/Projects/lovense-shenanigans/lovense-equinox-bridge/bridge.py --mode ble
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

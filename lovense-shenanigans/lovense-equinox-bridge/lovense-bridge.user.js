@@ -22,7 +22,7 @@
 (function() {
     'use strict';
 
-    const BRIDGE_URL = 'http://127.0.0.1:20010/command';
+    let BRIDGE_URL = 'http://127.0.0.1:20010/command';
     const LOG_PREFIX = '[LovenseBridge]';
 
     // ---- Settings helpers (read from Lovense settings) ----

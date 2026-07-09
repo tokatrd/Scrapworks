@@ -63,7 +63,7 @@ class MagicMotionDevice:
         if not addr:
             raise ValueError("No device address provided")
         self.client = BleakClient(addr)
-        await self.client.connect()
+        await self.client.connect(timeout=15.0)
         logger.info(f"Connected to {addr}")
 
         for service in self.client.services:

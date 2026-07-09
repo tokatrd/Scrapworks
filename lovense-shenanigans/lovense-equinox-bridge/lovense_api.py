@@ -26,6 +26,7 @@ class LovenseAPIServer:
         self.device_manager = device_manager
         self.host = host
         self.port = port
+        self._pattern_task = None
         self.app = web.Application()
         self.app.router.add_post("/command", self.handle_command)
         self.app.router.add_get("/", self.handle_root)
@@ -97,6 +98,9 @@ class LovenseAPIServer:
         time_sec = body.get("timeSec", 0)
 
         if action == "Stop":
+            if self._pattern_task is not None:
+                self._pattern_task.cancel()
+                self._pattern_task = None
             await self.device_manager.set_vibrate(0)
             return web.json_response({"code": 200, "type": "ok"})
 
@@ -139,7 +143,9 @@ class LovenseAPIServer:
             "earthquake": [100, 80, 100, 60, 100, 80, 100],
         }
         pattern = patterns.get(name, patterns["pulse"])
-        asyncio.create_task(self._play_pattern(pattern, time_sec))
+        if self._pattern_task is not None:
+            self._pattern_task.cancel()
+        self._pattern_task = asyncio.create_task(self._play_pattern(pattern, time_sec))
         return web.json_response({"code": 200, "type": "ok"})
 
     async def _play_pattern(self, pattern: list, duration_sec: int):
@@ -167,7 +173,9 @@ class LovenseAPIServer:
                 pass
 
         if strengths:
-            asyncio.create_task(self._play_pattern(strengths, time_sec))
+            if self._pattern_task is not None:
+                self._pattern_task.cancel()
+            self._pattern_task = asyncio.create_task(self._play_pattern(strengths, time_sec))
 
         return web.json_response({"code": 200, "type": "ok"})
 

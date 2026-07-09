@@ -13,11 +13,11 @@ so any app that supports Lovense toys can control the Equinox instead.
 """
 
 import asyncio
-import json
 import logging
 import signal
 import sys
 import argparse
+from collections.abc import Awaitable
 from typing import Optional
 from aiohttp import web
 
@@ -55,7 +55,7 @@ class DeviceManager:
         if self._backend:
             pct = int((lovense_level / 20.0) * 100)
             await self._backend.set_vibrate(pct)
-            logger.info(f"Vibrate: Lovense level={lovense_level}/20 -> {pct}%")
+            logger.info("Vibrate: Lovense level=%d/20 -> %d%%", lovense_level, pct)
 
 
 class DirectBLEBackend:
@@ -94,7 +94,7 @@ class DirectBLEBackend:
             await self.device.send_vibrate(pct)
 
     async def disconnect(self):
-        if self.device:
+        if self.device and self.device.is_connected:
             await self.device.stop()
             await self.device.disconnect()
         self._connected = False
@@ -181,6 +181,13 @@ class ButtplugBackend:
         return self._connected
 
 
+def _handle_signal(sig: int, shutdown_coro: Awaitable[None]) -> None:
+    try:
+        asyncio.create_task(shutdown_coro())
+    except Exception as e:
+        logger.error(f"Signal handler error: {e}")
+
+
 async def main():
     parser = argparse.ArgumentParser(
         description="Lovense Equinox Bridge - use your Magic Motion Equinox with Lovense software"
@@ -193,8 +200,8 @@ async def main():
                         help="Intiface Central WebSocket URL (default: ws://127.0.0.1:12345)")
     parser.add_argument("--port", type=int, default=20010,
                         help="Lovense API server port (default: 20010)")
-    parser.add_argument("--host", type=str, default="0.0.0.0",
-                        help="Lovense API server host (default: 0.0.0.0)")
+    parser.add_argument("--host", type=str, default="127.0.0.1",
+                        help="Lovense API server host (default: 127.0.0.1)")
     args = parser.parse_args()
 
     device_mgr = DeviceManager()
@@ -251,8 +258,9 @@ async def main():
 
         for sig in (signal.SIGINT, signal.SIGTERM):
             try:
-                asyncio.get_event_loop().add_signal_handler(
-                    sig, lambda: asyncio.create_task(shutdown())
+                asyncio.get_running_loop().add_signal_handler(
+                    sig,
+                    lambda sig=sig: _handle_signal(sig, shutdown)
                 )
             except NotImplementedError:
                 pass
