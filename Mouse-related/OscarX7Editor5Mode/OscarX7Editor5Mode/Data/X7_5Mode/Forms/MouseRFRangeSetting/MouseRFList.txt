@@ -1,0 +1,5 @@
+[English]
+Option0=15,22,1
+Option1=15,158,0
+Option2=15,151,0
+Option3=20,159,1

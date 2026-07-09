@@ -1,0 +1,12 @@
+# Sensitive data – never commit
+global_files/memory/
+global_files/logs/afk_questions.md
+*.env
+*.log
+
+# Build artifacts (adjust if needed)
+build/
+dist/
+__pycache__/
+*.o
+*.so

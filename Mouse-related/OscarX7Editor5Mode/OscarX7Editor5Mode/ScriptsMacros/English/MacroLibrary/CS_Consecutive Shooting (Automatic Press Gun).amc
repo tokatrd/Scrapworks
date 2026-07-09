@@ -1,0 +1,66 @@
+<Root>
+	<DefaultMacro>
+		<Major></Major>
+		<Description>To suppress gun's bursts recoil so that to ensure precise firepower
+Applicable weapon: light machine guns, rifles, mini-submachine gun
+
+</Description>
+		<Comment>Automatic Press Gun
+</Comment>
+		<GUIOption>
+			<RepeatType>1</RepeatType>
+		</GUIOption>
+		<KeyUp>
+			<Syntax></Syntax>
+		</KeyUp>
+		<KeyDown>
+			<Syntax>
+//   It is your new script below.
+//-------------------
+//there are three ways to create the script.
+//1. Insert functions from top and left panels.
+//2. Record both mouse and keyboard movements using record button.
+//3. Input with either keyboard panel below or your actual keyboard.
+LeftDown 1
+LeftUp 1
+Delay 110 ms
+MoveR 0 3
+LeftDown 1
+LeftUp 1
+Delay 110 ms
+MoveR 0 8
+LeftDown 1
+LeftUp 1
+Delay 110 ms
+MoveR 0 8
+LeftDown 1
+LeftUp 1
+Delay 110 ms
+MoveR 0 8
+LeftDown 1
+LeftUp 1
+Delay 110 ms
+MoveR 0 8
+LeftDown 1
+LeftUp 1
+Delay 110 ms
+MoveR 0 8
+LeftDown 1
+LeftUp 1
+Delay 110 ms
+MoveR 0 8
+LeftDown 1
+LeftUp 1
+Delay 110 ms
+MoveR 0 8
+LeftDown 1
+LeftUp 1
+Delay 110 ms
+MoveR 0 8
+LeftDown 1
+LeftUp 1
+Delay 110 ms</Syntax>
+		</KeyDown>
+		<Software>Counter-Strike (CS)
+</Software></DefaultMacro>
+</Root>

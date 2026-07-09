@@ -1,0 +1,47 @@
+﻿<Root>
+	<DefaultMacro>
+		<Major></Major>
+		<Description>Consecutive Shooting Function
+you can self-define times for consecutive shooting.
+Applicable weapon: ight machine guns, rifles, mini-submachine gun
+</Description>
+		<Comment>Consecutive Shooting
+</Comment>
+		<GUIOption>
+			<RepeatType>1</RepeatType>
+		</GUIOption>
+		<KeyUp>
+			<Syntax></Syntax>
+		</KeyUp>
+		<KeyDown>
+			<Syntax>
+//   It is your new script below.
+//-------------------
+//there are three ways to create the script.
+//1. Insert functions from top and left panels.
+//2. Record both mouse and keyboard movements using record button.
+//3. Input with either keyboard panel below or your actual keyboard.
+LeftDown 1
+Delay 64 ms
+LeftUp 1
+Delay 64 ms
+LeftDown 1
+Delay 70 ms
+LeftUp 1
+Delay 70 ms
+LeftDown 1
+Delay 85 ms
+LeftUp 1
+Delay 85 ms
+LeftDown 1
+Delay 95 ms
+LeftUp 1
+Delay 95 ms
+LeftDown 1
+Delay 105 ms
+LeftUp 1
+Delay 105 ms</Syntax>
+		</KeyDown>
+		<Software>Counter-Strike (CS)
+</Software></DefaultMacro>
+</Root>

@@ -1,0 +1,14 @@
+//MessageConfirm
+[English]
+FontName=Tahoma
+lb_Message->Font->Size=10
+lb_Message->Font->Color=RGB,0,177,202,青色
+//lb_Message->Font->Color.1=RGB,20,156,178,青色
+//lb_Message->Font->Color.2=RGB,255,0,0,紅色
+
+lb_Message->Position=rectWH,47,32,200,57
+bt_OK->Position=rectWH,124,111,65,31
+bt_WindowClose->Position=rectWH,264,6,21,19
+
+[ChineseT]
+lb_Message->Font->Color=RGB,0,177,202,青色

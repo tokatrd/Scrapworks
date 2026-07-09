@@ -1,0 +1,99 @@
+<Root>
+	<DefaultMacro>
+		<Major></Major>
+		<Description>Best applicable for Terrorist Team to quick purchase AK weapons
+Such as: AK, bullet-proof vests, grenades, flash bombs, main gun bullets, pistol bullets, smoke bombs
+
+</Description>
+		<Comment>Purchase AK (T)
+</Comment>
+		<GUIOption>
+			<RepeatType>0</RepeatType>
+		</GUIOption>
+		<KeyUp>
+			<Syntax></Syntax>
+		</KeyUp>
+		<KeyDown>
+			<Syntax>
+//   It is your new script below.
+//-------------------
+//there are three ways to create the script.
+//1. Insert functions from top and left panels.
+//2. Record both mouse and keyboard movements using record button.
+//3. Input with either keyboard panel below or your actual keyboard.
+KeyDown 5 1
+Delay 20 ms
+KeyUp 5 1
+Delay 20 ms
+KeyDown 33 1
+Delay 20 ms
+KeyUp 33 1
+Delay 20 ms
+KeyDown 31 1
+Delay 20 ms
+KeyUp 31 1
+Delay 20 ms
+KeyDown 5 1
+Delay 20 ms
+KeyUp 5 1
+Delay 20 ms
+KeyDown 37 1
+Delay 20 ms
+KeyUp 37 1
+Delay 20 ms
+KeyDown 31 1
+Delay 20 ms
+KeyUp 31 1
+Delay 20 ms
+KeyDown 5 1
+Delay 20 ms
+KeyUp 5 1
+Delay 20 ms
+KeyDown 35 1
+Delay 20 ms
+KeyUp 35 1
+Delay 20 ms
+KeyDown 5 1
+Delay 20 ms
+KeyUp 5 1
+Delay 20 ms
+KeyDown 36 1
+Delay 20 ms
+KeyUp 36 1
+Delay 20 ms
+KeyDown 18 1
+Delay 20 ms
+KeyUp 18 1
+Delay 20 ms
+KeyDown 33 1
+Delay 20 ms
+KeyUp 33 1
+Delay 20 ms
+KeyDown 18 1
+Delay 20 ms
+KeyUp 18 1
+Delay 20 ms
+KeyDown 32 1
+Delay 20 ms
+KeyUp 32 1
+Delay 20 ms
+KeyDown 18 1
+Delay 20 ms
+KeyUp 18 1
+Delay 20 ms
+KeyDown 32 1
+Delay 20 ms
+KeyUp 32 1
+Delay 20 ms
+KeyDown 18 1
+Delay 20 ms
+KeyUp 18 1
+Delay 20 ms
+KeyDown 34 1
+Delay 20 ms
+KeyUp 34 1
+Delay 20 ms</Syntax>
+		</KeyDown>
+		<Software>Counter-Strike (CS)
+</Software></DefaultMacro>
+</Root>

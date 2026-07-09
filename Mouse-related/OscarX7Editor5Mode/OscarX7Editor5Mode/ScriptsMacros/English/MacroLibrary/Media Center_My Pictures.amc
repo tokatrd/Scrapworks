@@ -1,0 +1,31 @@
+﻿<Root>
+	<DefaultMacro>
+		<Major></Major>
+		<Description>My Pictures
+</Description>
+		<Comment>My Pictures
+</Comment>
+		<GUIOption>
+			<RepeatType>0</RepeatType>
+		</GUIOption>
+		<KeyUp>
+			<Syntax></Syntax>
+		</KeyUp>
+		<KeyDown>
+			<Syntax>
+//   It is your new script below.
+//-------------------
+//there are three ways to create the script.
+//1. Insert functions from top and left panels.
+//2. Record both mouse and keyboard movements using record button.
+//3. Input with either keyboard panel below or your actual keyboard.
+KeyDown 264 1
+KeyDown 12 1
+Delay 64 ms
+KeyUp 12 1
+Delay 64 ms
+KeyUp 264 1</Syntax>
+		</KeyDown>
+		<Software>Media Center Edition
+</Software></DefaultMacro>
+</Root>

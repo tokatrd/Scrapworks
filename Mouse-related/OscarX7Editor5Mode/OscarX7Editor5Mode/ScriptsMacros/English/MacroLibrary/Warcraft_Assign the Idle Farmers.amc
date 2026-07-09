@@ -1,0 +1,32 @@
+<Root>
+	<DefaultMacro>
+		<Major></Major>
+		<Description>Quick assign the idle farmers for the construction or exploitation of resources. 
+</Description>
+		<Comment>Assign the Idle Farmers
+</Comment>
+		<GUIOption>
+			<RepeatType>0</RepeatType>
+		</GUIOption>
+		<KeyUp>
+			<Syntax></Syntax>
+		</KeyUp>
+		<KeyDown>
+			<Syntax>
+//   It is your new script below.
+//-------------------
+//there are three ways to create the script.
+//1. Insert functions from top and left panels.
+//2. Record both mouse and keyboard movements using record button.
+//3. Input with either keyboard panel below or your actual keyboard.
+KeyDown 65 1
+Delay 64 ms
+KeyUp 65 1
+Delay 64 ms
+KeyDown 5 1
+Delay 64 ms
+KeyUp 5 1</Syntax>
+		</KeyDown>
+		<Software>Warcraft (Frozen Throne)
+</Software></DefaultMacro>
+</Root>

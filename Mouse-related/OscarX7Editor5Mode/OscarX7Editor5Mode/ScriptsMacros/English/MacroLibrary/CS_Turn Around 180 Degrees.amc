@@ -1,0 +1,37 @@
+﻿<Root>
+	<DefaultMacro>
+		<Major></Major>
+		<Description>One click to turn around 180 degrees,you can destroy your enemies in the seconds.
+</Description>
+		<Comment>Turn Around 180 Degrees
+</Comment>
+		<GUIOption>
+			<RepeatType>0</RepeatType>
+		</GUIOption>
+		<KeyUp>
+			<Syntax></Syntax>
+		</KeyUp>
+		<KeyDown>
+			<Syntax>
+//   It is your new script below.
+//-------------------
+//there are three ways to create the script.
+//1. Insert functions from top and left panels.
+//2. Record both mouse and keyboard movements using record button.
+//3. Input with either keyboard panel below or your actual keyboard.
+MoveR 799 0
+Delay 23 ms
+MoveR 799 0
+Delay 23 ms
+MoveR 799 0
+Delay 23 ms
+MoveR 799 0
+Delay 23 ms
+MoveR 500 0
+Delay 23 ms
+MoveR 50 0
+Delay 23 ms</Syntax>
+		</KeyDown>
+		<Software>Counter-Strike (CS）
+</Software></DefaultMacro>
+</Root>

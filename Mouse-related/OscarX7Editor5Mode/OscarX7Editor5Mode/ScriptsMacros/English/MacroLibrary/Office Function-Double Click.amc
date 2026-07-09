@@ -1,0 +1,34 @@
+﻿<Root>
+	<DefaultMacro>
+		<Major></Major>
+		<Description>Click once instead of twice
+Just one click to directly open files and probrams, save time and improve efficiency.
+</Description>
+		<Comment>Office Function-Double Click
+</Comment>
+		<GUIOption>
+			<RepeatType>1</RepeatType>
+		</GUIOption>
+		<KeyUp>
+			<Syntax></Syntax>
+		</KeyUp>
+		<KeyDown>
+			<Syntax>
+//   It is your new script below.
+//-------------------
+//there are three ways to create the script.
+//1. Insert functions from top and left panels.
+//2. Record both mouse and keyboard movements using record button.
+//3. Input with either keyboard panel below or your actual keyboard.
+LeftDown 1
+Delay 64 ms
+LeftUp 1
+Delay 200 ms
+LeftDown 1
+Delay 64 ms
+LeftUp 1
+Delay 200 ms</Syntax>
+		</KeyDown>
+		<Software>Windows Operation
+</Software></DefaultMacro>
+</Root>

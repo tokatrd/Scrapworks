@@ -1,0 +1,14 @@
+//TrayIconWebAdvertisement
+[English]
+FontName=Tahoma
+
+FTrayIconWebAd->Color=RGB,255,255,255,White
+lb_Title->Font->Color=RGB,174,239,0,GrassGreen
+lb_Close->Font->Color=RGB,236,107,13,Orange
+
+lb_Title->Position=rectWH,25,6,80,16
+lb_Close->Position=rectWH,8,145,26,16
+WebBrowser_Ad->Position=rectWH,5,30,217,111
+bt_Close->Position=rectWH,206,5,17,17
+
+Transparent=0

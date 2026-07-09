@@ -1,0 +1,13 @@
+//MessageBox
+[English]
+FontName=Tahoma
+lb_Message->Font->Size=10
+lb_Message->Font->Color=RGB,0,177,202,«C¦â
+
+lb_Message->Position=rectWH,32,40,250,61
+bt_WindowClose->Position=rectWH,265,6,21,19
+bt_OK->Position=rectWH,132,112,65,31
+bt_Cancel->Position=rectWH,218,112,65,31
+
+[ChineseT]
+bt_OK->Position=rectWH,80,115,65,31

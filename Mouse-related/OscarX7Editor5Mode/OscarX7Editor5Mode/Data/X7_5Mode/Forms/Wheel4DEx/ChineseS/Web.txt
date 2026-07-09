@@ -1,0 +1,2 @@
+[Wheel4D]
+SRC=http://www.win2.cn/ty/zgindex.asp

@@ -1,0 +1,31 @@
+﻿<Root>
+	<DefaultMacro>
+		<Major></Major>
+		<Description>Cycle through items in the order they were opened
+</Description>
+		<Comment>Cycle through items in the order they were opened
+</Comment>
+		<GUIOption>
+			<RepeatType>0</RepeatType>
+		</GUIOption>
+		<KeyUp>
+			<Syntax></Syntax>
+		</KeyUp>
+		<KeyDown>
+			<Syntax>
+//   It is your new script below.
+//-------------------
+//there are three ways to create the script.
+//1. Insert functions from top and left panels.
+//2. Record both mouse and keyboard movements using record button.
+//3. Input with either keyboard panel below or your actual keyboard.
+KeyDown 266 1
+KeyDown 41 1
+Delay 64 ms
+KeyUp 41 1
+Delay 64 ms
+KeyUp 266 1</Syntax>
+		</KeyDown>
+		<Software>Windows
+</Software></DefaultMacro>
+</Root>

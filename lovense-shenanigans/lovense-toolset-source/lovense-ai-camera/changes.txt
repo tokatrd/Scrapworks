@@ -1,0 +1,32 @@
+
+==Record changes since last revision
+
+2022-06-08
+ -release a v0.2.0 to do gesture recognition
+
+2022-03-23
+ -leave the VideoCapture cap empty instead of initiating by 'nullptr' to avoid failing to start obs in case no camera
+
+2022-03-22 （release_v0.1.0)
+ -add test tool for read video files
+ -smooth roll angle (not used in v1 since they use UI computation)
+ -remove some logs
+
+2022-03-04
+ -smoooth euler angle(ONLY pitch as now) by acceleration
+
+2022-02-24
+ -add 4 more face landmarks
+
+2022-02-21
+ -fix resize function(use ncnn's one instead of opencv) to speed up entire procedure
+ -add flip function if in need
+ -reenable delete[] scaledFrame to reduce memory
+
+2022-02-17
+ -add five more landmarks to special effects
+ -change num_face in pbtxt from 1 to 4
+
+2022-02-16
+ -optimize euler angles via atan but atan2
+ -fix face special effect landmarks in case the resolution is less than 1280

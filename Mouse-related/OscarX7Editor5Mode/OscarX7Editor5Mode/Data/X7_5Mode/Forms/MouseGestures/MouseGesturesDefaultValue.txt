@@ -1,0 +1,17 @@
+[English]
+lb_ActionLabel0=27
+lb_ActionLabel1=28
+lb_ActionLabel2=31
+lb_ActionLabel3=32
+lb_ActionLabel4=0
+lb_ActionLabel5=0
+lb_ActionLabel6=0
+lb_ActionLabel7=0
+lb_ActionLabel8=0
+lb_ActionLabel9=0
+lb_ActionLabel10=0
+lb_ActionLabel11=0
+lb_ActionLabel12=1
+lb_ActionLabel13=11
+lb_ActionLabel14=2
+lb_ActionLabel15=12
