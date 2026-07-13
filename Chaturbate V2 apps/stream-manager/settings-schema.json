@@ -1,0 +1,159 @@
+[
+  {
+    "name": "tipGoal",
+    "description": "Session tip goal in tokens",
+    "type": "number",
+    "default": 1000,
+    "required": true
+  },
+  {
+    "name": "bannedWords",
+    "description": "Comma-separated words to auto-filter in chat",
+    "type": "text",
+    "default": "freak,darn,shoot",
+    "required": false
+  },
+  {
+    "name": "voteOptions",
+    "description": "Custom tip-vote options (exactly 2 columns: label, value)",
+    "type": "table",
+    "columns": ["Label", "Description"],
+    "default": [["Sing", "Sing a song"], ["Dance", "Do a dance"], ["Joke", "Tell a joke"]],
+    "required": false
+  },
+  {
+    "name": "overlayEnabled",
+    "description": "Enable overlay event emission",
+    "type": "boolean",
+    "default": true,
+    "required": false
+  },
+  {
+    "name": "tipMenuEnabled",
+    "description": "Enable the itemised tip menu with discounts",
+    "type": "boolean",
+    "default": true,
+    "required": false
+  },
+  {
+    "name": "tipMenuLabel",
+    "description": "Label shown above tip options in the tip dialog",
+    "type": "text",
+    "default": "Choose a menu item:",
+    "required": false
+  },
+  {
+    "name": "tipMenuItems",
+    "description": "Tip menu items (name, description, price in tokens)",
+    "type": "table",
+    "columns": ["Name", "Description", "Price"],
+    "default": [["Dance", "A short dance", 10], ["Sing", "Sing a song", 25], ["Joi", "JOI session", 50]],
+    "required": false
+  },
+  {
+    "name": "discountsEnabled",
+    "description": "Enable per-group and per-user discounts on tip menu items",
+    "type": "boolean",
+    "default": false,
+    "required": false
+  },
+  {
+    "name": "discountEntries",
+    "description": "Discount rules: group (all/follower/fanclub/mod/regular/user:username), item name or * for all, discount percent (0-100)",
+    "type": "table",
+    "columns": ["Group", "Item", "Discount%"],
+    "default": [["fanclub", "*", 20], ["follower", "Dance", 10]],
+    "required": false
+  },
+  {
+    "name": "anonConverterEnabled",
+    "description": "Enable Anonymous User Converter: periodically blacks out cam for anons",
+    "type": "boolean",
+    "default": true,
+    "required": false
+  },
+  {
+    "name": "anonConverterInterval",
+    "description": "Seconds between blackout events (default 180 = 3 min)",
+    "type": "number",
+    "default": 180,
+    "required": false
+  },
+  {
+    "name": "anonConverterBlackoutDuration",
+    "description": "Seconds the cam is blacked out for anons (default 15)",
+    "type": "number",
+    "default": 15,
+    "required": false
+  },
+  {
+    "name": "anonConverterMessage",
+    "description": "Message shown to anons during blackout (use {{link}} for affiliate URL)",
+    "type": "text",
+    "default": "Uninterrupted cam access for registered users! Sign up free at {{link}}",
+    "required": false
+  },
+  {
+    "name": "anonConverterAffiliateLink",
+    "description": "Your Chaturbate affiliate / referral link",
+    "type": "text",
+    "default": "https://chaturbate.com/ref/signup/",
+    "required": false
+  },
+  {
+    "name": "progressTheme",
+    "description": "Progress bar color theme (pick from 20 pre-packed themes)",
+    "type": "select",
+    "options": [
+      {"name": "Coral Ember (white)", "value": "coral-ember"},
+      {"name": "Golden Glow (white)", "value": "golden-glow"},
+      {"name": "Lime Zest (white)", "value": "lime-zest"},
+      {"name": "Ocean Breeze (white)", "value": "ocean-breeze"},
+      {"name": "Lavender Mist (white)", "value": "lavender-mist"},
+      {"name": "Peach Sorbet (white)", "value": "peach-sorbet"},
+      {"name": "Mint Dew (white)", "value": "mint-dew"},
+      {"name": "Rose Quartz (white)", "value": "rose-quartz"},
+      {"name": "Sky Blue (white)", "value": "sky-blue"},
+      {"name": "Silver Gray (white)", "value": "silver-gray"},
+      {"name": "Ruby Night (black)", "value": "ruby-night"},
+      {"name": "Amber Dark (black)", "value": "amber-dark"},
+      {"name": "Neon Green (black)", "value": "neon-green"},
+      {"name": "Cyber Teal (black)", "value": "cyber-teal"},
+      {"name": "Deep Cyan (black)", "value": "deep-cyan"},
+      {"name": "Royal Indigo (black)", "value": "royal-indigo"},
+      {"name": "Ultra Violet (black)", "value": "ultra-violet"},
+      {"name": "Hot Pink (black)", "value": "hot-pink"},
+      {"name": "Electric Yellow (black)", "value": "electric-yellow"},
+      {"name": "Acid Lime (black)", "value": "acid-lime"}
+    ],
+    "default": "coral-ember",
+    "required": false
+  },
+  {
+    "name": "progressBarStyle",
+    "description": "Visual look of the progress bar characters",
+    "type": "select",
+    "options": [
+      {"name": "Blocks \u2588\u2591", "value": "bar"},
+      {"name": "Arrows \u25B6\u25B7", "value": "arrow"},
+      {"name": "Circles \u25CF\u25CB", "value": "circle"},
+      {"name": "Squares \u25A0\u25A1", "value": "square"},
+      {"name": "Percent text only", "value": "number"}
+    ],
+    "default": "bar",
+    "required": false
+  },
+  {
+    "name": "progressTextMode",
+    "description": "How the progress bar text behaves when content is long",
+    "type": "select",
+    "options": [
+      {"name": "Auto (smart switch)", "value": "auto"},
+      {"name": "Static (fixed)", "value": "static"},
+      {"name": "Scroll (horizontal)", "value": "scroll"},
+      {"name": "Animated (flash)", "value": "animate"}
+    ],
+    "default": "auto",
+    "required": false
+  }
+]

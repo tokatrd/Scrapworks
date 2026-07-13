@@ -1,0 +1,221 @@
+plan_id: "20260711-anon-converter-features"
+objective: "Add 5 features to Stream Manager: !anon commands, rotating panel, tip leaderboard, !anon add/remove, blacklist mode"
+complexity: "MEDIUM"
+created: "2026-07-11T12:40:00Z"
+waves:
+  - wave: 1
+    description: "Foundation — new constants, KV keys, shared utility functions"
+    tasks:
+      - id: "task-01"
+        description: "Add new constants and KV keys to shared.js"
+        agent: "gem-implementer"
+        status: "pending"
+        wave: 1
+        files:
+          - "shared.js"
+          - "simulator.js"
+        details: |
+          Add to shared.js constants section:
+          - ANON_BLACKLIST_KEY = 'anonBlacklist'
+          - PANEL_CYCLE_LABEL = 'panelCycleTick'
+          - PANEL_VIEW_KEY = 'panelCurrentView'
+          - ANON_INTERVAL_KEY (move from local var to constant)
+          - ANON_DURATION_KEY (move from local var to constant)
+
+      - id: "task-02"
+        description: "Add blacklist utility functions to shared.js"
+        agent: "gem-implementer"
+        status: "pending"
+        wave: 1
+        depends_on: ["task-01"]
+        files:
+          - "shared.js"
+          - "simulator.js"
+        details: |
+          Add to shared.js:
+          - getAnonBlacklist() → returns array from KV
+          - addToAnonBlacklist(username) → add user, return bool
+          - removeFromAnonBlacklist(username) → remove user, return bool
+          - isBlacklisted(username) → bool check
+
+      - id: "task-03"
+        description: "Modify doAnonConverterBlackout() to filter blacklisted users"
+        agent: "gem-implementer"
+        status: "pending"
+        wave: 1
+        depends_on: ["task-02"]
+        files:
+          - "shared.js"
+          - "simulator.js"
+        details: |
+          In doAnonConverterBlackout(), change:
+            var users = $room.users || [];
+          To:
+            var users = ($room.users || []).filter(function(u) { return !isBlacklisted(u); });
+          This subtracts blacklisted registered users from the allow-list.
+
+      - id: "task-04"
+        description: "Add leaderboard utility function to shared.js"
+        agent: "gem-implementer"
+        status: "pending"
+        wave: 1
+        files:
+          - "shared.js"
+          - "simulator.js"
+        details: |
+          Add getTopTippers(count) function:
+          - Use $kv.iter('userTips_') to iterate all per-user tip keys
+          - Collect {username, tokens} pairs into array
+          - Sort descending by tokens
+          - Return top N items (default 5)
+          - Handle case where kv iter is empty or no prefix matches
+
+  - wave: 2
+    description: "Chat commands — !anon and !top"
+    tasks:
+      - id: "task-05"
+        description: "Add !anon command handler to chat-message.js"
+        agent: "gem-implementer"
+        status: "pending"
+        wave: 2
+        depends_on: ["task-01", "task-02", "task-04"]
+        files:
+          - "handlers/chat-message.js"
+          - "simulator.js"
+        conflicts_with: []
+        details: |
+          Add !anon subcommands handler (pattern follows !hiddencam):
+          - !anon → status (active/inactive, blackout active?, interval, duration, anon count, blacklist count)
+          - !anon on → startAnonConverter() (broadcaster only)
+          - !anon off → stopAnonConverter() (broadcaster only)
+          - !anon interval <sec> → update $settings + recreate callback (broadcaster only)
+          - !anon duration <sec> → update $settings (broadcaster only)
+          - !anon add <user> → $limitcam.add([user]) (broadcaster only)
+          - !anon remove <user> → $limitcam.remove([user]) (broadcaster only)
+          - !anon blacklist add <user> → addToAnonBlacklist(user) (broadcaster only)
+          - !anon blacklist remove <user> → removeFromAnonBlacklist(user) (broadcaster only)
+          - !anon blacklist → list blacklisted users
+          Update !commands list to include !anon and !top.
+
+      - id: "task-06"
+        description: "Add !top command handler to chat-message.js"
+        agent: "gem-implementer"
+        status: "pending"
+        wave: 2
+        depends_on: ["task-04"]
+        files:
+          - "handlers/chat-message.js"
+          - "simulator.js"
+        details: |
+          Add !top handler:
+          - !top → top 5 tippers
+          - !top N → top N tippers
+          - Uses getTopTippers(N)
+          - Format output as a single notice string
+
+  - wave: 3
+    description: "Panel rotation — cycling 3-row display"
+    tasks:
+      - id: "task-07"
+        description: "Add panel cycle callback and rotation logic to shared.js"
+        agent: "gem-implementer"
+        status: "pending"
+        wave: 3
+        depends_on: ["task-01"]
+        files:
+          - "shared.js"
+          - "simulator.js"
+        conflicts_with: []
+        details: |
+          Add:
+          - startPanelCycle() → creates repeating callback PANEL_CYCLE_LABEL every 6s
+          - stopPanelCycle() → cancels callback
+          - doPanelCycleTick() → increments PANEL_VIEW_KEY, calls $room.reloadPanel()
+          
+          Panel views (cycled in broadcast-panel-update.js):
+          - View 0: Tips / Followers / Top Tipper
+          - View 1: Tips / Anon Converter (status + interval/duration) / Anon Count
+          - View 2: Tips / Followers / Hidden Cam status (or 'No hidden cam')
+          
+          $room.reloadPanel() triggers onBroadcastPanelUpdate which reads PANEL_VIEW_KEY.
+
+      - id: "task-08"
+        description: "Update broadcast-panel-update.js to cycle views"
+        agent: "gem-implementer"
+        status: "pending"
+        wave: 3
+        depends_on: ["task-07"]
+        files:
+          - "handlers/broadcast-panel-update.js"
+          - "simulator.js"
+        details: |
+          Replace current onBroadcastPanelUpdate logic:
+          - Read $kv.get(PANEL_VIEW_KEY, 0) % 3 → current view
+          - View 0: Tips / Followers / Top Tipper
+          - View 1: Tips / 'Anon: ON/OFF (interval s)' / 'Anons: N | Blacklisted: N'
+          - View 2: Tips / Followers / Hidden Cam status or 'Cam: Public'
+
+      - id: "task-09"
+        description: "Wire panel cycle start/stop in app-start and app-stop"
+        agent: "gem-implementer"
+        status: "pending"
+        wave: 3
+        depends_on: ["task-07"]
+        files:
+          - "handlers/app-start.js"
+          - "handlers/app-stop.js"
+          - "handlers/app-settings-change.js"
+          - "simulator.js"
+        details: |
+          In app-start.js: call startPanelCycle() after startAnonConverter()
+          In app-stop.js: call stopPanelCycle()
+          In app-settings-change.js: if anonConverterEnabled changes, start/stop panel cycle accordingly
+
+  - wave: 4
+    description: "Integration — settings schema, cleanup, sim wiring"
+    tasks:
+      - id: "task-10"
+        description: "Ensure all new function references exist in simulator.js"
+        agent: "gem-implementer"
+        status: "pending"
+        wave: 4
+        depends_on: ["task-01", "task-02", "task-03", "task-04", "task-05", "task-06", "task-07", "task-08", "task-09"]
+        files:
+          - "simulator.js"
+        details: |
+          Verify all new functions from shared.js are defined in simulator.js:
+          - getAnonBlacklist, addToAnonBlacklist, removeFromAnonBlacklist, isBlacklisted
+          - getTopTippers
+          - startPanelCycle, stopPanelCycle, doPanelCycleTick
+          - All new !anon and !top command handlers
+          - Updated onBroadcastPanelUpdate with views
+          Verify the simulation runner exercises new features:
+          - Add !anon status call
+          - Add !top call
+          - Add blacklist scenario
+
+      - id: "task-11"
+        description: "Run simulator and fix any errors"
+        agent: "gem-implementer"
+        status: "pending"
+        wave: 4
+        depends_on: ["task-10"]
+        details: |
+          Run: node /home/toka/Documents/Projects/Chaturbate\ V2\ apps/stream-manager/simulator.js
+          Fix any ReferenceError, TypeError, or logic errors until simulation runs clean.
+
+      - id: "task-12"
+        description: "Final review pass on all modified files"
+        agent: "gem-reviewer"
+        status: "pending"
+        wave: 4
+        depends_on: ["task-11"]
+        details: |
+          Review all changes for:
+          - No regressions in existing handler behavior
+          - Broadcasting-only gates correct
+          - Blacklist subtraction logic correct
+          - Panel rotation doesn't leak $limitcam info in wrong views
+          - Leaderboard KV iteration is efficient
+          - All functions have simulator mirrors
+          - "this function shouldn't affect anyone who's not the target, ever" — zero tolerance check

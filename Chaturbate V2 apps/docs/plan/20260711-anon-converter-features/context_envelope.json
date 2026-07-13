@@ -1,0 +1,65 @@
+{
+  "plan_id": "20260711-anon-converter-features",
+  "objective": "Add 5 features to Stream Manager: !anon commands, rotating panel, tip leaderboard, !anon add/remove, blacklist mode",
+  "complexity": "MEDIUM",
+  "created": "2026-07-11T12:40:00Z",
+  "tech_stack": {
+    "platform": "Chaturbate App V2 (sandboxed JavaScript)",
+    "api_version": "Portal v0.102.0",
+    "globals": ["$app","$api","$callback","$fanclub","$kv","$limitcam","$media","$message","$overlay","$room","$settings","$shortcut","$tip","$user","console"],
+    "sandbox_limits": "No fetch/XHR/external network. Persistent KV storage. 270x69 panel. 19 event handlers."
+  },
+  "constraints": [
+    "All changes must be mirrored in both handler files AND simulator.js",
+    "Broadcaster-only commands must check $user.username === $room.owner",
+    "$limitcam.start(msg, users) is atomic - registered users in allow-list never lose feed",
+    "Panel limited to 3_rows_of_labels template",
+    "Panel cycling uses $callback repeating timer",
+    "Blacklist subtraction happens in doAnonConverterBlackout() before $limitcam.start()",
+    "KV.iter('userTips_') used for leaderboard sorting"
+  ],
+  "architecture_snapshot": {
+    "pattern": "Event-driven. shared.js exports utility functions consumed by handler files. simulator.js mirrors all logic for local Node.js testing.",
+    "key_modules": {
+      "shared.js": "Utilities, anon converter lifecycle, hidden cam, discount logic, panel cycling",
+      "handlers/chat-message.js": "Command routing (!commands, !tipmenu, !goal, !hiddencam, !anon, !top)",
+      "handlers/broadcast-panel-update.js": "3-row panel rendering with cyclical views",
+      "handlers/tip-received.js": "Tip tracking, per-user tips KV, anon tip tracking",
+      "handlers/callback.js": "Routes callbacks to tipGoalReminder, anonConverterTick, anonConverterRestore, panelCycleTick",
+      "handlers/app-start.js": "Initializes callbacks",
+      "handlers/app-stop.js": "Cleans up callbacks"
+    }
+  },
+  "conventions": [
+    "Function names: camelCase",
+    "Constants: UPPER_SNAKE_CASE",
+    "KV keys: camelCase strings",
+    "Stream Manager uses 'var' not 'let/const' for IDE compatibility",
+    "Each handler file exports one function assigned to onXxx = function(){}",
+    "Simulator mirrors handler code exactly, using same function bodies"
+  ],
+  "prior_decisions": [
+    "Atomic $limitcam.start(msg, users) fix applied (bug: registered users losing access)",
+    "Auto-add latecomers in onUserEnter during anon blackout",
+    "Official app (streamersuite, v0.0.2) confirmed: 15s/180s defaults match ours",
+    "Rotating 3-row panel decided: cycle through views every 6s via $callback"
+  ],
+  "research_digest": {
+    "official_app_profile": {
+      "name": "Anonymous User Converter Pro",
+      "author": "streamersuite",
+      "version": "0.0.2",
+      "settings": "null (hardcoded)",
+      "behavior": "15s blackout every 180s via $limitcam.start()",
+      "our_defaults": "Match exactly (15s/180s)"
+    },
+    "verified_api": {
+      "$limitcam.start(msg, users?)": "Atomic - sets message AND allow-list in one call",
+      "$limitcam.add(users)": "Append to allow-list",
+      "$limitcam.remove(users)": "Remove from allow-list",
+      "$kv.iter(prefix)": "Iterate KV keys with prefix filter",
+      "$callback.create(label, delay, repeating)": "Timer scheduling",
+      "$room.setPanelTemplate()": "3_rows_of_labels template only"
+    }
+  }
+}
