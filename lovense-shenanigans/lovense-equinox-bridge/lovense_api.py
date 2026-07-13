@@ -41,7 +41,6 @@ class LovenseAPIServer:
             return web.json_response({"code": 400, "type": "error", "message": "Invalid JSON"}, status=400)
 
         command = body.get("command", "")
-        toy_param = body.get("toy", None)
         logger.info(f"Received command: {command} body={body}")
 
         handlers = {
@@ -95,7 +94,6 @@ class LovenseAPIServer:
 
     async def handle_function(self, body):
         action = body.get("action", "")
-        time_sec = body.get("timeSec", 0)
 
         if action == "Stop":
             if self._pattern_task is not None:
@@ -121,6 +119,9 @@ class LovenseAPIServer:
             await self.device_manager.set_vibrate(value)
             return web.json_response({"code": 200, "type": "ok"})
         elif action_name_lower in ("stop",):
+            if self._pattern_task is not None:
+                self._pattern_task.cancel()
+                self._pattern_task = None
             await self.device_manager.set_vibrate(0)
             return web.json_response({"code": 200, "type": "ok"})
         elif action_name_lower in ("all",):
@@ -161,7 +162,6 @@ class LovenseAPIServer:
         await self.device_manager.set_vibrate(0)
 
     async def handle_pattern(self, body):
-        rule = body.get("rule", "")
         strength_str = body.get("strength", "")
         time_sec = body.get("timeSec", 5)
 
@@ -183,7 +183,3 @@ class LovenseAPIServer:
         toy = self.device_manager.get_toy_info()
         batt = toy["battery"] if toy else 100
         return web.json_response({"code": 200, "data": {"battery": batt}, "type": "OK"})
-
-    def start(self):
-        logger.info(f"Starting Lovense API server on {self.host}:{self.port}")
-        return web.run_app(self.app, host=self.host, port=self.port, print=lambda *a: None)

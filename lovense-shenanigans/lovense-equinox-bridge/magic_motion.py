@@ -18,7 +18,6 @@ Multi-argument command structure:
   0b ff 04 <v2> <v2> 0a 00 04 08 <v1> 64 00
 """
 
-import asyncio
 import logging
 from bleak import BleakScanner, BleakClient
 

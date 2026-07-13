@@ -77,11 +77,8 @@ class DirectBLEBackend:
             logger.info(f"Found {len(candidates)} device(s):")
             for i, d in enumerate(candidates):
                 logger.info(f"  [{i}] {d.name} ({d.address})")
-            if len(candidates) == 1:
-                chosen = candidates[0]
-            else:
-                logger.info(f"Auto-selecting first device: {candidates[0].name}")
-                chosen = candidates[0]
+            logger.info(f"Auto-selecting first device: {candidates[0].name}")
+            chosen = candidates[0]
             self.address = chosen.address
 
         logger.info(f"Connecting to {self.address}...")
@@ -113,7 +110,7 @@ class ButtplugBackend:
 
     async def connect(self):
         try:
-            from buttplug import ButtplugClient, DeviceOutputCommand, OutputType
+            from buttplug import ButtplugClient, OutputType
         except ImportError:
             logger.error("buttplug library not installed: pip install buttplug")
             return False
@@ -228,9 +225,9 @@ async def main():
             logger.info("  4. Enable device scanning in Intiface Central")
         sys.exit(1)
 
-    logger.info(f"=== Lovense Equinox Bridge Ready ===")
+    logger.info("=== Lovense Equinox Bridge Ready ===")
     logger.info(f"Listening on http://{args.host}:{args.port}/command")
-    logger.info(f"Point your Lovense-compatible app to this address")
+    logger.info("Point your Lovense-compatible app to this address")
     logger.info("")
     logger.info("Integration paths for camming:")
     logger.info("  1. Cam sites with 'Lovense Game Mode' option: enter this server's IP:port")
@@ -272,11 +269,6 @@ async def main():
         await backend.disconnect()
         await runner.cleanup()
         logger.info("Bridge stopped")
-
-
-async def shutdown_wrapper(stop_event):
-    logger.info("Shutdown signal received")
-    stop_event.set()
 
 
 if __name__ == "__main__":
