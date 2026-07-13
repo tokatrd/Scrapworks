@@ -1,0 +1,115 @@
+=== X7 F3 V-Track (09da:9066) Configuration Backup ===
+
+=== Interface 0 (keyboard) ===
+
+--- GET_REPORT(Feature) Report IDs 0x01-0x1f ---
+
+--- GET_REPORT(Output) Report IDs 0x01-0x1f ---
+
+--- SET_FEATURE(addr) + GET_FEATURE sweep (X7 EEPROM-like) ---
+
+=== Interface 1 (mouse) ===
+
+--- GET_REPORT(Feature) Report IDs 0x01-0x1f ---
+  GET_FEATURE(RID=0x01)                         OK (8): a1 01 01 03 01 00 10 00
+  GET_FEATURE(RID=0x02)                         OK (8): a1 01 02 03 01 00 10 00
+  GET_FEATURE(RID=0x03)                         OK (8): a1 01 03 03 01 00 10 00
+  GET_FEATURE(RID=0x04)                         OK (8): a1 01 04 03 01 00 10 00
+  GET_FEATURE(RID=0x05)                         OK (8): a1 01 05 03 01 00 10 00
+  GET_FEATURE(RID=0x06)                         OK (8): a1 01 06 03 01 00 10 00
+  GET_FEATURE(RID=0x07)                         OK (8): a1 01 07 03 01 00 10 00
+  GET_FEATURE(RID=0x08)                         OK (8): a1 01 08 03 01 00 10 00
+  GET_FEATURE(RID=0x09)                         OK (8): a1 01 09 03 01 00 10 00
+  GET_FEATURE(RID=0x0a)                         OK (8): a1 01 0a 03 01 00 10 00
+  GET_FEATURE(RID=0x0b)                         OK (8): a1 01 0b 03 01 00 10 00
+  GET_FEATURE(RID=0x0c)                         OK (8): a1 01 0c 03 01 00 10 00
+  GET_FEATURE(RID=0x0d)                         OK (8): a1 01 0d 03 01 00 10 00
+  GET_FEATURE(RID=0x0e)                         OK (8): a1 01 0e 03 01 00 10 00
+  GET_FEATURE(RID=0x0f)                         OK (8): a1 01 0f 03 01 00 10 00
+  GET_FEATURE(RID=0x10)                         OK (8): a1 01 10 03 01 00 10 00
+  GET_FEATURE(RID=0x11)                         OK (8): a1 01 11 03 01 00 10 00
+  GET_FEATURE(RID=0x12)                         OK (8): a1 01 12 03 01 00 10 00
+  GET_FEATURE(RID=0x13)                         OK (8): a1 01 13 03 01 00 10 00
+  GET_FEATURE(RID=0x14)                         OK (8): a1 01 14 03 01 00 10 00
+  GET_FEATURE(RID=0x15)                         OK (8): a1 01 15 03 01 00 10 00
+  GET_FEATURE(RID=0x16)                         OK (8): a1 01 16 03 01 00 10 00
+  GET_FEATURE(RID=0x17)                         OK (8): a1 01 17 03 01 00 10 00
+  GET_FEATURE(RID=0x18)                         OK (8): a1 01 18 03 01 00 10 00
+  GET_FEATURE(RID=0x19)                         OK (8): a1 01 19 03 01 00 10 00
+  GET_FEATURE(RID=0x1a)                         OK (8): a1 01 1a 03 01 00 10 00
+  GET_FEATURE(RID=0x1b)                         OK (8): a1 01 1b 03 01 00 10 00
+  GET_FEATURE(RID=0x1c)                         OK (8): a1 01 1c 03 01 00 10 00
+  GET_FEATURE(RID=0x1d)                         OK (8): a1 01 1d 03 01 00 10 00
+  GET_FEATURE(RID=0x1e)                         OK (8): a1 01 1e 03 01 00 10 00
+  GET_FEATURE(RID=0x1f)                         OK (8): a1 01 1f 03 01 00 10 00
+
+--- SET_FEATURE(addr) + GET_FEATURE sweep on intf 1 ---
+  READ[0x0000]: a1 01 01 03 01 00 20 00
+  READ[0x0010]: a1 01 01 03 01 00 20 00
+  READ[0x0020]: a1 01 01 03 01 00 20 00
+  READ[0x0030]: a1 01 01 03 01 00 20 00
+  READ[0x0040]: a1 01 01 03 01 00 20 00
+  READ[0x0050]: a1 01 01 03 01 00 20 00
+  READ[0x0060]: a1 01 01 03 01 00 20 00
+  READ[0x0070]: a1 01 01 03 01 00 20 00
+  READ[0x0080]: a1 01 01 03 01 00 20 00
+  READ[0x0090]: a1 01 01 03 01 00 20 00
+  READ[0x00a0]: a1 01 01 03 01 00 20 00
+  READ[0x00b0]: a1 01 01 03 01 00 20 00
+  READ[0x00c0]: a1 01 01 03 01 00 20 00
+  READ[0x00d0]: a1 01 01 03 01 00 20 00
+  READ[0x00e0]: a1 01 01 03 01 00 20 00
+  READ[0x00f0]: a1 01 01 03 01 00 20 00
+  READ[0x0100]: a1 01 01 03 01 00 20 00
+  READ[0x0110]: a1 01 01 03 01 00 20 00
+  READ[0x0120]: a1 01 01 03 01 00 20 00
+  READ[0x0130]: a1 01 01 03 01 00 20 00
+  READ[0x0140]: a1 01 01 03 01 00 20 00
+  READ[0x0150]: a1 01 01 03 01 00 20 00
+  READ[0x0160]: a1 01 01 03 01 00 20 00
+  READ[0x0170]: a1 01 01 03 01 00 20 00
+  READ[0x0180]: a1 01 01 03 01 00 20 00
+  READ[0x0190]: a1 01 01 03 01 00 20 00
+  READ[0x01a0]: a1 01 01 03 01 00 20 00
+  READ[0x01b0]: a1 01 01 03 01 00 20 00
+  READ[0x01c0]: a1 01 01 03 01 00 20 00
+  READ[0x01d0]: a1 01 01 03 01 00 20 00
+  READ[0x01e0]: a1 01 01 03 01 00 20 00
+  READ[0x01f0]: a1 01 01 03 01 00 20 00
+  READ[0x0200]: a1 01 01 03 01 00 20 00
+  READ[0x0210]: a1 01 01 03 01 00 20 00
+  READ[0x0220]: a1 01 01 03 01 00 20 00
+  READ[0x0230]: a1 01 01 03 01 00 20 00
+  READ[0x0240]: a1 01 01 03 01 00 20 00
+  READ[0x0250]: a1 01 01 03 01 00 20 00
+  READ[0x0260]: a1 01 01 03 01 00 20 00
+  READ[0x0270]: a1 01 01 03 01 00 20 00
+  READ[0x0280]: a1 01 01 03 01 00 20 00
+  READ[0x0290]: a1 01 01 03 01 00 20 00
+  READ[0x02a0]: a1 01 01 03 01 00 20 00
+  READ[0x02b0]: a1 01 01 03 01 00 20 00
+  READ[0x02c0]: a1 01 01 03 01 00 20 00
+  READ[0x02d0]: a1 01 01 03 01 00 20 00
+  READ[0x02e0]: a1 01 01 03 01 00 20 00
+  READ[0x02f0]: a1 01 01 03 01 00 20 00
+  READ[0x0300]: a1 01 01 03 01 00 20 00
+  READ[0x0310]: a1 01 01 03 01 00 20 00
+  READ[0x0320]: a1 01 01 03 01 00 20 00
+  READ[0x0330]: a1 01 01 03 01 00 20 00
+  READ[0x0340]: a1 01 01 03 01 00 20 00
+  READ[0x0350]: a1 01 01 03 01 00 20 00
+  READ[0x0360]: a1 01 01 03 01 00 20 00
+  READ[0x0370]: a1 01 01 03 01 00 20 00
+  READ[0x0380]: a1 01 01 03 01 00 20 00
+  READ[0x0390]: a1 01 01 03 01 00 20 00
+  READ[0x03a0]: a1 01 01 03 01 00 20 00
+  READ[0x03b0]: a1 01 01 03 01 00 20 00
+  READ[0x03c0]: a1 01 01 03 01 00 20 00
+  READ[0x03d0]: a1 01 01 03 01 00 20 00
+  READ[0x03e0]: a1 01 01 03 01 00 20 00
+  READ[0x03f0]: a1 01 01 03 01 00 20 00
+
+--- Interrupt input reads ---
+  intf1 interrupt (EP 0x82): 00 00 ff ff 00 00 00 00
+
+=== Backup complete ===

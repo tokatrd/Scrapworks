@@ -1,0 +1,3 @@
+# A4Tech X7 F3 V-Track Gaming Mouse — hidraw access for oscar
+# Allows user-space access to HID feature reports (EEPROM read/write)
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="09da", ATTRS{idProduct}=="9066", MODE="0666"
