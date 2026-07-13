@@ -1,8 +1,5 @@
 """Tests for the 6 specific fixes to the Lovense Equinox Bridge."""
 
-import asyncio
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -32,8 +29,8 @@ class TestFix1MagicMotionConnectTimeout:
         source = inspect.getsource(MagicMotionDevice.connect)
         lines = source.split("\n")
         bare_connect_lines = [
-            l.strip() for l in lines
-            if "self.client.connect(" in l and "timeout=" not in l
+            line.strip() for line in lines
+            if "self.client.connect(" in line and "timeout=" not in line
         ]
         assert not bare_connect_lines, (
             f"FIX 1 FAILED: bare self.client.connect() found "

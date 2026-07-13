@@ -20,7 +20,7 @@ class TestDeviceManagerValueClamp:
 
         mgr = DeviceManager()
         # Call set_vibrate and verify it calls backend with correct mapping
-        with pytest.MonkeyPatch.context() as mp:
+        with pytest.MonkeyPatch.context():
             calls = []
 
             async def fake_set_vibrate(self, pct):
@@ -38,7 +38,7 @@ class TestDeviceManagerValueClamp:
         from bridge import DeviceManager
 
         mgr = DeviceManager()
-        with pytest.MonkeyPatch.context() as mp:
+        with pytest.MonkeyPatch.context():
             calls = []
 
             async def fake_set_vibrate(self, pct):
@@ -56,7 +56,7 @@ class TestDeviceManagerValueClamp:
         from bridge import DeviceManager
 
         mgr = DeviceManager()
-        with pytest.MonkeyPatch.context() as mp:
+        with pytest.MonkeyPatch.context():
             calls = []
 
             async def fake_set_vibrate(self, pct):
@@ -74,7 +74,7 @@ class TestDeviceManagerValueClamp:
         from bridge import DeviceManager
 
         mgr = DeviceManager()
-        with pytest.MonkeyPatch.context() as mp:
+        with pytest.MonkeyPatch.context():
             calls = []
 
             async def fake_set_vibrate(self, pct):
@@ -94,7 +94,6 @@ class TestDirectBLEBackendDisconnect:
 
     def test_disconnect_has_is_connected_guard(self):
         import bridge
-        import inspect
 
         source = inspect.getsource(bridge.DirectBLEBackend.disconnect)
         assert "self.device" in source
@@ -110,7 +109,7 @@ class TestDirectBLEBackendDisconnect:
 
     def test_disconnect_does_not_raise_when_device_disconnected(self):
         from bridge import DirectBLEBackend
-        from unittest.mock import AsyncMock, MagicMock
+        from unittest.mock import AsyncMock
 
         backend = DirectBLEBackend(address="AA:BB:CC:DD:EE:FF")
         mock_dev = AsyncMock()
@@ -127,7 +126,6 @@ class TestSignalHandler:
 
     def test_handle_signal_uses_try_except(self):
         import bridge
-        import inspect
 
         source = inspect.getsource(bridge._handle_signal)
         assert "try:" in source
@@ -136,7 +134,6 @@ class TestSignalHandler:
 
     def test_main_uses_add_signal_handler(self):
         import bridge
-        import inspect
 
         source = inspect.getsource(bridge.main)
         assert "add_signal_handler" in source
@@ -146,7 +143,6 @@ class TestSignalHandler:
 
     def test_main_handles_not_implemented_error(self):
         import bridge
-        import inspect
 
         source = inspect.getsource(bridge.main)
         assert "NotImplementedError" in source
