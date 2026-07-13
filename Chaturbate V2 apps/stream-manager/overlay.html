@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stream Manager — Broadcast Overlay</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: #fff;
+  }
+
+  /* ── Tip goal bar ── */
+  .goal-container {
+    width: 340px;
+    background: rgba(0, 0, 0, 0.65);
+    border-radius: 14px;
+    padding: 18px 22px 20px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    transition: opacity 0.4s ease;
+  }
+  .goal-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .goal-header .amount { color: #ffd700; }
+  .goal-track {
+    width: 100%;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+  .goal-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcb77);
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .goal-label {
+    text-align: center;
+    margin-top: 6px;
+    font-size: 13px;
+    opacity: 0.85;
+    font-weight: 500;
+  }
+
+  /* ── Follower alert ── */
+  .follower-alert {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(107, 203, 119, 0.25);
+    border-left: 3px solid #6bcb77;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  .follower-alert.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .follower-alert strong { color: #6bcb77; }
+
+  /* ── Goal reached burst ── */
+  .goal-reached {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 800;
+    color: #ffd700;
+    margin-top: 10px;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .goal-reached.show {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* ── Anon Converter Blackout Banner ── */
+  .anon-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .anon-banner.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .anon-banner h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #ff6b6b;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .anon-banner p {
+    font-size: 16px;
+    color: #ccc;
+    text-align: center;
+    max-width: 320px;
+    line-height: 1.5;
+  }
+  .anon-banner .link {
+    margin-top: 16px;
+    padding: 10px 28px;
+    background: #ff6b6b;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .anon-banner .timer {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #888;
+  }
+</style>
+</head>
+<body>
+<div class="goal-container" id="container">
+  <div class="goal-header">
+    <span>Tip Goal</span>
+    <span class="amount" id="amountLabel">0 / 0</span>
+  </div>
+  <div class="goal-track">
+    <div class="goal-fill" id="goalFill"></div>
+  </div>
+  <div class="goal-label" id="pctLabel">0%</div>
+  <div class="follower-alert" id="followerAlert"></div>
+  <div class="goal-reached" id="goalReached">GOAL REACHED!</div>
+</div>
+
+<!-- Anon Converter Blackout Banner -->
+<div class="anon-banner" id="anonBanner">
+  <h1 id="anonTitle">Cam Restricted</h1>
+  <p id="anonMessage">Uninterrupted cam access for registered users! Sign up free below.</p>
+  <a class="link" id="anonLink" href="#" target="_blank">Sign Up Free</a>
+  <div class="timer" id="anonTimer"></div>
+</div>
+
+<script>
+(function () {
+  var fill  = document.getElementById('goalFill');
+  var amt   = document.getElementById('amountLabel');
+  var pctL  = document.getElementById('pctLabel');
+  var fa    = document.getElementById('followerAlert');
+  var gr    = document.getElementById('goalReached');
+  var ab    = document.getElementById('anonBanner');
+  var aTit  = document.getElementById('anonTitle');
+  var aMsg  = document.getElementById('anonMessage');
+  var aLink = document.getElementById('anonLink');
+  var aTimer = document.getElementById('anonTimer');
+
+  var goal = 1000;
+  var anonTimerInterval = null;
+
+  function updateBar(current, g) {
+    if (g > 0) goal = g;
+    var pct = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
+    fill.style.width = pct + '%';
+    amt.textContent = current + ' / ' + goal;
+    pctL.textContent = Math.round(pct) + '%';
+  }
+
+  function showFollower(username, total) {
+    fa.innerHTML = '<strong>\u2726</strong> ' + username + ' followed! <small>(' + total + ' total)</small>';
+    fa.classList.add('show');
+    if (fa._timer) clearTimeout(fa._timer);
+    fa._timer = setTimeout(function () { fa.classList.remove('show'); }, 4000);
+  }
+
+  function flashGoalReached() {
+    gr.classList.add('show');
+    if (gr._timer) clearTimeout(gr._timer);
+    gr._timer = setTimeout(function () { gr.classList.remove('show'); }, 5000);
+    updateBar(0, goal);
+  }
+
+  function showAnonBlackout(data) {
+    if (!data) return;
+    aTit.textContent = 'Cam Restricted';
+    aMsg.textContent = data.message || 'Sign up for uninterrupted access!';
+    if (data.link) {
+      aLink.href = data.link;
+      aLink.style.display = 'inline-block';
+    } else {
+      aLink.style.display = 'none';
+    }
+    ab.classList.add('show');
+
+    // Countdown timer
+    var remaining = data.duration || 15;
+    if (anonTimerInterval) clearInterval(anonTimerInterval);
+    aTimer.textContent = 'Feed returns in ' + remaining + 's...';
+    anonTimerInterval = setInterval(function () {
+      remaining--;
+      if (remaining > 0) {
+        aTimer.textContent = 'Feed returns in ' + remaining + 's...';
+      } else {
+        clearInterval(anonTimerInterval);
+        anonTimerInterval = null;
+      }
+    }, 1000);
+  }
+
+  function hideAnonBlackout() {
+    ab.classList.remove('show');
+    if (anonTimerInterval) {
+      clearInterval(anonTimerInterval);
+      anonTimerInterval = null;
+    }
+  }
+
+  // Exposed event handlers for the $overlay.on() system
+  window.__overlayEvents = {
+    onTip: function (data) {
+      if (data && typeof data.total === 'number') {
+        updateBar(data.total, data.goal || goal);
+      }
+    },
+    onFollow: function (data) {
+      if (data) showFollower(data.username || 'Someone', data.total || 0);
+    },
+    onGoalReached: function (data) {
+      flashGoalReached(data ? data.total : 0);
+    },
+    onSessionEnd: function () {
+      document.getElementById('container').style.opacity = '0.3';
+    },
+    onSettingsChange: function (data) {
+      if (data && data.tipGoal) goal = data.tipGoal;
+    },
+    onAnonBlackout: function (data) {
+      showAnonBlackout(data);
+    },
+    onAnonRestore: function () {
+      hideAnonBlackout();
+    },
+  };
+})();
+</script>
+</body>
+</html>
