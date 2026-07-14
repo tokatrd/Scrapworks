@@ -27,49 +27,7 @@
       "type": "remote",
       "url": "http://192.168.0.2:8090/mcp",
       "enabled": true,
-      "description": "MCP aggregator — exposes filesystem, sqlite, docker, fetch MCPs"
-    },
-    "duckduckgo-mcp": {
-      "type": "remote",
-      "url": "http://192.168.0.2:8020/sse",
-      "enabled": true,
-      "description": "Privacy-first web search via DuckDuckGo, no API key needed"
-    },
-    "docker-mcp": {
-      "type": "remote",
-      "url": "http://192.168.0.2:8021/sse",
-      "enabled": true,
-      "description": "Docker container and image lifecycle management"
-    },
-    "fetch-mcp": {
-      "type": "remote",
-      "url": "http://192.168.0.2:8022/sse",
-      "enabled": true,
-      "description": "Fetch URLs and return content as markdown"
-    },
-    "ntfy-mcp": {
-      "type": "remote",
-      "url": "http://192.168.0.2:8023/sse",
-      "enabled": true,
-      "description": "Push notification sending and receiving"
-    },
-    "filesystem-mcp": {
-      "type": "remote",
-      "url": "http://192.168.0.2:8024/sse",
-      "enabled": true,
-      "description": "Sandboxed filesystem read/write/search on /home"
-    },
-    "sqlite-mcp": {
-      "type": "remote",
-      "url": "http://192.168.0.2:8025/sse",
-      "enabled": true,
-      "description": "SQLite database queries and schema management"
-    },
-    "netdata": {
-      "type": "remote",
-      "url": "http://192.168.0.2:19999",
-      "enabled": true,
-      "description": "Real-time system monitoring (CPU, mem, disk, net, processes)"
+      "description": "MCP Hub — aggregates filesystem, sqlite, fetch, and docker MCPs"
     }
   },
   "agent": {
