@@ -1,0 +1,71 @@
+# MCPHub Configuration
+# Bridges STDIO-only MCP servers to HTTP/SSE endpoints
+# Each server becomes available at http://localhost:8090/mcp/<name>
+
+servers:
+  docker-mcp:
+    command: docker
+    args:
+      - run
+      - -i
+      - --rm
+      - -v
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ckreiling/mcp-server-docker:latest
+    type: stdio
+    description: Docker container and image management
+
+  filesystem:
+    command: docker
+    args:
+      - run
+      - -i
+      - --rm
+      - -v
+      - /:/host:ro
+      - portertech/filesystem-mcp-server:latest
+      - /host/home
+    type: stdio
+    description: Filesystem read/write access (sandboxed)
+
+  sqlite:
+    command: docker
+    args:
+      - run
+      - -i
+      - --rm
+      - -v
+      - /mcp-data/sqlite:/data
+      - mcp/sqlite:latest
+      - --db-path
+      - /data/mcp.db
+    type: stdio
+    description: SQLite database queries and management
+
+  fetch:
+    command: docker
+    args:
+      - run
+      - -i
+      - --rm
+      - mcp/fetch:latest
+    type: stdio
+    description: Web URL fetching and scraping
+
+  duckduckgo:
+    command: curl
+    args:
+      - -s
+      - http://duckduckgo-mcp:8020/sse
+    type: sse
+    url: http://duckduckgo-mcp:8020/sse
+    description: Web search via DuckDuckGo (no API key)
+
+  ntfy:
+    command: curl
+    args:
+      - -s
+      - http://ntfy-mcp:8023/sse
+    type: sse
+    url: http://ntfy-mcp:8023/sse
+    description: Push notifications and alerts

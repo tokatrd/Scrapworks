@@ -1,0 +1,140 @@
+# MCP Server Stack for home.peralezf.com
+# Deploy on 192.168.0.2 via:
+#   scp -r .opencode/mcp-deploy user@192.168.0.2:~/mcp-stack/
+#   ssh user@192.168.0.2 "cd ~/mcp-stack && docker compose up -d"
+
+services:
+  # ── MCP Aggregator ───────────────────────────────────────
+  # Exposes all STDIO-based MCP servers over HTTP at /mcp/<name>
+  # Gives a single entry point for opencode to connect
+  mcphub:
+    image: samanhappy/mcphub:latest
+    container_name: mcphub
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./mcphub-config.yml:/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - MCPHUB_PORT=8090
+      - MCPHUB_CONFIG=/config.yml
+    networks:
+      - mcp-net
+
+  # ── Web Search (free, no API key) ─────────────────────────
+  duckduckgo-mcp:
+    image: mekayelanik/duckduckgo-mcp:stable
+    container_name: duckduckgo-mcp
+    restart: unless-stopped
+    ports:
+      - "8020:8020"
+    environment:
+      - PORT=8020
+      - AUTH_TOKEN=false
+    networks:
+      - mcp-net
+
+  # ── Docker Management MCP ─────────────────────────────────
+  docker-mcp:
+    build:
+      context: https://github.com/ckreiling/mcp-server-docker.git
+      dockerfile: Dockerfile
+    container_name: docker-mcp
+    restart: unless-stopped
+    ports:
+      - "8021:8021"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - PORT=8021
+      - TRANSPORT=http
+      - HOST=0.0.0.0
+    networks:
+      - mcp-net
+
+  # ── Web Fetch (URL scraping) ──────────────────────────────
+  fetch-mcp:
+    image: mcp/fetch:latest
+    container_name: fetch-mcp
+    restart: unless-stopped
+    ports:
+      - "8022:8022"
+    environment:
+      - PORT=8022
+    networks:
+      - mcp-net
+
+  # ── System Monitoring (Netdata) ──────────────────────────
+  netdata:
+    image: netdata/netdata:latest
+    container_name: netdata
+    restart: unless-stopped
+    ports:
+      - "19999:19999"
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - NETDATA_CLAIM_URL=
+      - NETDATA_CLAIM_TOKEN=
+      - NETDATA_DISABLE_CLOUD=1
+    networks:
+      - mcp-net
+
+  # ── Notification MCP (ntfy) ──────────────────────────────
+  ntfy-mcp:
+    image: binwiederhier/ntfy:latest
+    container_name: ntfy
+    restart: unless-stopped
+    ports:
+      - "8023:80"
+    volumes:
+      - ntfy-data:/var/lib/ntfy
+      - ./ntfy-config.yml:/etc/ntfy/config.yml:ro
+    networks:
+      - mcp-net
+
+  # ── MCP-to-HTTP bridge for filesystem ────────────────────
+  filesystem-mcp:
+    image: portertech/filesystem-mcp-server:latest
+    container_name: filesystem-mcp
+    restart: unless-stopped
+    ports:
+      - "8024:8024"
+    volumes:
+      - /:/host:ro
+      - /tmp/mcp-fs-log:/tmp:rw
+    environment:
+      - ALLOWED_DIRECTORIES=/host/home,/host/tmp,/host/etc
+      - PORT=8024
+    networks:
+      - mcp-net
+
+  # ── SQLite MCP ───────────────────────────────────────────
+  sqlite-mcp:
+    image: mcp/sqlite:latest
+    container_name: sqlite-mcp
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+    volumes:
+      - /mcp-data/sqlite:/data
+    environment:
+      - SQLITE_DB_PATH=/data/mcp.db
+      - PORT=8025
+    networks:
+      - mcp-net
+
+networks:
+  mcp-net:
+    driver: bridge
+
+volumes:
+  ntfy-data:

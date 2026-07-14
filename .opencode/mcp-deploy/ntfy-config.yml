@@ -1,0 +1,11 @@
+# ntfy push notification config
+# https://ntfy.sh/docs/config/
+
+base-url: "http://ntfy:80"
+listen-http: ":80"
+cache-file: "/var/lib/ntfy/cache.db"
+auth-file: "/var/lib/ntfy/auth.db"
+auth-default-access: "deny-all"
+
+# For unauthenticated access (e.g., LAN use), set:
+# auth-default-access: "allow-all"

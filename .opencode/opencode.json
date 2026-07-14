@@ -1,0 +1,101 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "openai": {
+      "options": {
+        "apiKey": "lm-studio",
+        "baseURL": "http://localhost:1234/v1/"
+      },
+      "models": {
+        "skill-agent": {
+          "id": "skill-agent",
+          "tool_call": true,
+          "reasoning": true,
+          "limit": {
+            "context": 131072,
+            "output": 8192
+          }
+        }
+      }
+    }
+  },
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+  "mcp": {
+    "mcphub": {
+      "type": "remote",
+      "url": "http://192.168.0.2:8090/mcp",
+      "enabled": true,
+      "description": "MCP aggregator — exposes filesystem, sqlite, docker, fetch MCPs"
+    },
+    "duckduckgo-mcp": {
+      "type": "remote",
+      "url": "http://192.168.0.2:8020/sse",
+      "enabled": true,
+      "description": "Privacy-first web search via DuckDuckGo, no API key needed"
+    },
+    "docker-mcp": {
+      "type": "remote",
+      "url": "http://192.168.0.2:8021/sse",
+      "enabled": true,
+      "description": "Docker container and image lifecycle management"
+    },
+    "fetch-mcp": {
+      "type": "remote",
+      "url": "http://192.168.0.2:8022/sse",
+      "enabled": true,
+      "description": "Fetch URLs and return content as markdown"
+    },
+    "ntfy-mcp": {
+      "type": "remote",
+      "url": "http://192.168.0.2:8023/sse",
+      "enabled": true,
+      "description": "Push notification sending and receiving"
+    },
+    "filesystem-mcp": {
+      "type": "remote",
+      "url": "http://192.168.0.2:8024/sse",
+      "enabled": true,
+      "description": "Sandboxed filesystem read/write/search on /home"
+    },
+    "sqlite-mcp": {
+      "type": "remote",
+      "url": "http://192.168.0.2:8025/sse",
+      "enabled": true,
+      "description": "SQLite database queries and schema management"
+    },
+    "netdata": {
+      "type": "remote",
+      "url": "http://192.168.0.2:19999",
+      "enabled": true,
+      "description": "Real-time system monitoring (CPU, mem, disk, net, processes)"
+    }
+  },
+  "agent": {
+    "skill-agent": {
+      "description": "General-purpose skill agent using MiniCPM5 1B. Use for skill calls, tool use, and routine sub-agent tasks.",
+      "mode": "subagent",
+      "model": "openai/skill-agent",
+      "permission": { "*": "allow" }
+    },
+    "skill-agent-2": {
+      "description": "Skill agent 2 using MiniCPM5 1B. Use for parallel skill calls concurrent with other skill agents.",
+      "mode": "subagent",
+      "model": "openai/skill-agent",
+      "permission": { "*": "allow" }
+    },
+    "skill-agent-3": {
+      "description": "Skill agent 3 using MiniCPM5 1B. Use for parallel skill calls concurrent with other skill agents.",
+      "mode": "subagent",
+      "model": "openai/skill-agent",
+      "permission": { "*": "allow" }
+    },
+    "skill-agent-4": {
+      "description": "Skill agent 4 using MiniCPM5 1B. Use for parallel skill calls concurrent with other skill agents.",
+      "mode": "subagent",
+      "model": "openai/skill-agent",
+      "permission": { "*": "allow" }
+    }
+  }
+}
