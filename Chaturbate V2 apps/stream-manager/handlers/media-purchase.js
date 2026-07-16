@@ -6,4 +6,9 @@ onMediaPurchase = function () {
     $media.tokens + ' tokens spent.',
     { color: '#FFE0EA' }
   );
+  addNotification(
+    $user.username + ' purchased ' + $media.name + '!',
+    'media',
+    'event'
+  );
 };

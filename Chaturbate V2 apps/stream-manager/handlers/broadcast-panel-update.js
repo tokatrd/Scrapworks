@@ -36,9 +36,9 @@ onBroadcastPanelUpdate = function () {
       row3_value = topTipper;
     }
   } else if (view === 1) {
-    // View 1: Tips / [Progress Bar] / Anon Conv
+    // View 1: Tips / [Progress Bar] / Anon Conv + counts
     row3_label = 'Anon Conv.';
-    row3_value = (anonActive ? 'ON' : 'OFF') + (anonBlackout ? ' [BLACKOUT]' : '') + ' (' + anonInterval + 's/' + anonDuration + 's)';
+    row3_value = (anonActive ? 'ON' : 'OFF') + (anonBlackout ? ' [BLACKOUT]' : '') + ' ' + anonCount + 'a/' + blCount + 'b';
   } else {
     // View 2: Tips / [Progress Bar] / Cam
     row3_label = followers > 0 ? 'Followers' : 'Cam';

@@ -21,5 +21,10 @@ onAppStart = function () {
     startPanelCycle();
   }
 
+  // Start notification auto timer if enabled
+  if ($settings.notificationAutoEnabled !== false) {
+    startNotificationAutoTimer();
+  }
+
   notifyBroadcaster(APP_NAME + ' v' + APP_VERSION + ' started.');
 };

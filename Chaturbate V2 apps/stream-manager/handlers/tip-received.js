@@ -3,14 +3,8 @@ onTipReceived = function () {
   var tips = incrCounter(SESSION_TIPS_KEY, $tip.tokens);
   var goal = $kv.get(TIP_GOAL_KEY, 1000);
 
-  // Announce non-anonymous tips
-  if (!$tip.isAnon) {
-    var msg = $user.username + ' just tipped ' + $tip.tokens + ' tokens!';
-    if ($tip.message) {
-      msg += ' "' + $tip.message + '"';
-    }
-    $room.sendNotice(msg);
-  }
+  // Non-anonymous announcements handled by addNotification below
+  // (avoids duplicate room notices)
 
   // Track top tipper (only if not anonymous)
   if (!$tip.isAnon) {
@@ -56,6 +50,14 @@ onTipReceived = function () {
 
   // Update panel
   $room.reloadPanel();
+
+  // Add rolling notification (single source of public tip announcements)
+  var tipText = ($tip.isAnon ? 'Someone' : $user.username)
+    + ' just tipped ' + $tip.tokens + ' tokens!';
+  if ($tip.message) {
+    tipText += ' "' + $tip.message + '"';
+  }
+  addNotification(tipText, 'tip', 'event');
 
   // Emit overlay event
   if ($settings.overlayEnabled !== false) {

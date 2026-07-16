@@ -10,6 +10,9 @@ onUserFollow = function () {
     count + ' new follower' + (count === 1 ? '' : 's') + ' this broadcast.'
   );
 
+  // Add rolling notification
+  addNotification($user.username + ' just followed!', 'follow', 'event');
+
   if ($settings.overlayEnabled !== false) {
     $overlay.emit('follow', {
       username: $user.username,

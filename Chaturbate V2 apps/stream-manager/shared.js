@@ -32,22 +32,15 @@ const ANON_CONVERTER_RESTORE_LABEL = 'anonConverterRestore';
 var DEFAULT_ANON_INTERVAL = 180;
 var DEFAULT_ANON_DURATION = 15;
 
-// ── Panel Cycle Keys ──
-const PANEL_CYCLE_LABEL = 'panelCycleTick';
-const PANEL_VIEW_KEY = 'panelCurrentView';
-
 // ── Anon Blacklist Keys ──
 const ANON_BLACKLIST_KEY = 'anonBlacklist';
 
-// ── Tip Menu Keys ──
-const TIP_MENU_ITEMS_KEY = 'tipMenuItems';
-
-// ── Blacklist Keys ──
-const ANON_BLACKLIST_KEY = 'anonBlacklist';
-
 // ── Panel Cycle Keys ──
 const PANEL_CYCLE_LABEL = 'panelCycleTick';
 const PANEL_VIEW_KEY = 'panelCurrentView';
+
+// ── Tip Menu Keys ──
+const TIP_MENU_ITEMS_KEY = 'tipMenuItems';
 
 // ============================================================
 // Utility: determine which discount groups a user belongs to
@@ -159,7 +152,7 @@ function buildTipMenuOptions(username) {
 }
 
 // ============================================================
-// Format tip menu as a chat message (for !tipmenu command)
+// Format tip menu as a chat message (for !menu / !tipmenu command)
 // ============================================================
 function formatTipMenuText(username) {
   var rawItems = $settings.tipMenuItems;
@@ -434,10 +427,9 @@ function notifyBroadcaster(message, options) {
 }
 
 function incrCounter(key, amount) {
-  var val = $kv.get(key, 0);
-  val += typeof amount === 'number' ? amount : 1;
-  $kv.set(key, val);
-  return val;
+  // Use atomic increment to avoid race conditions
+  $kv.incr(key, typeof amount === 'number' ? amount : 1);
+  return $kv.get(key, 0);
 }
 
 // ============================================================
@@ -603,13 +595,15 @@ function buildPanelTable(row1_label, row1_value, progressText, row3_label, row3_
 // ============================================================
 function getNextScrollOffset() {
   var off = $kv.get(PROGRESS_SCROLL_KEY, 0);
-  $kv.set(PROGRESS_SCROLL_KEY, off + 1);
+  // Wrap at 1000 to prevent unbounded KV growth
+  $kv.set(PROGRESS_SCROLL_KEY, (off + 1) % 1000);
   return off;
 }
 
 function getNextAnimateTick() {
   var tick = $kv.get(PROGRESS_ANIMATE_KEY, 0);
-  $kv.set(PROGRESS_ANIMATE_KEY, tick + 1);
+  // Wrap at 100 to prevent unbounded KV growth
+  $kv.set(PROGRESS_ANIMATE_KEY, (tick + 1) % 100);
   return tick;
 }
 
@@ -619,4 +613,248 @@ function resetScrollOffset() {
 
 function resetAnimateTick() {
   $kv.set(PROGRESS_ANIMATE_KEY, 0);
+}
+
+// ============================================================
+// Rolling Chat Notifications
+// ============================================================
+
+// ── Notification Keys ──
+const NOTIFICATION_QUEUE_KEY = 'notificationQueue';
+const NOTIFICATION_AUTO_LABEL = 'notificationAutoTick';
+
+// ── 20 Rolling Notification Templates (fallback if settings table is empty) ──
+var NOTIFICATION_DEFAULTS = [
+  { type: 'tip',        template: '{{username}} just tipped {{amount}} tokens! \u2726',                    weight: 10 },
+  { type: 'tip',        template: 'Thank you {{username}} for the {{amount}} token tip! \u2661',           weight: 8 },
+  { type: 'follow',     template: 'New follower: {{username}}! \u2726 Welcome to the show!',               weight: 10 },
+  { type: 'follow',     template: '{{username}} just followed! Give them a warm welcome!',                 weight: 8 },
+  { type: 'enter',      template: '{{username}} has entered the room! \u2192',                             weight: 8 },
+  { type: 'enter',      template: 'Welcome back, {{username}}! Good to see you!',                          weight: 6 },
+  { type: 'fanclub',    template: '{{username}} joined the fanclub! Thank you so much! \u2726',            weight: 8 },
+  { type: 'fanclub',    template: '{{username}} renewed their fanclub membership! \u2661',                 weight: 6 },
+  { type: 'media',      template: '{{username}} purchased {{item}}! Thank you for your support!',          weight: 8 },
+  { type: 'goal',       template: '\u2726 Goal reached! {{amount}} tokens total! Thank you everyone!',     weight: 5 },
+  { type: 'prompt',     template: 'Don\'t forget to check !menu',                                          weight: 8 },
+  { type: 'prompt',     template: 'Having fun? !menu has all the options',                                 weight: 7 },
+  { type: 'prompt',     template: 'Feeling generous? Every tip is appreciated! \u2726',                   weight: 6 },
+  { type: 'prompt',     template: 'Looking for something? Check !menu',                                    weight: 7 },
+  { type: 'prompt',     template: 'New here? !commands for everything available',                          weight: 7 },
+  { type: 'prompt',     template: 'Your support makes the show better! \u2661',                            weight: 5 },
+  { type: 'prompt',     template: 'Loving the vibes tonight! \u2726',                                      weight: 6 },
+  { type: 'prompt',     template: 'Don\'t be shy - say hi! !commands for options',                         weight: 6 },
+  { type: 'prompt',     template: 'Curious about discounts? !discounts to check',                          weight: 5 },
+  { type: 'prompt',     template: 'Stay tuned - more fun coming up! \u2726',                               weight: 5 },
+];
+
+// ── Context-Aware Reply Templates ──
+// These fire when a user sends a chat message matching a pattern.
+// Replies are instructive: they guide users toward proper interaction channels (tip menu, commands, etc.)
+var REPLY_TEMPLATES = [
+  // Requests → soft redirect
+  { type: 'request', template: 'Don\'t forget to check !menu', weight: 10 },
+  { type: 'request', template: '!menu has everything listed with prices', weight: 9 },
+  { type: 'request', template: 'There\'s an option for that in !menu', weight: 9 },
+  { type: 'request', template: 'Check !menu for all available options', weight: 8 },
+  { type: 'request', template: 'All options are listed in !menu', weight: 7 },
+  // Greetings → welcome + guidance
+  { type: 'greeting', template: 'Hi {{username}} -- check !menu and !commands', weight: 10 },
+  { type: 'greeting', template: 'Welcome {{username}} -- !menu for options', weight: 9 },
+  // Compliments → brief + redirect
+  { type: 'compliment', template: 'Thank you, {{username}} -- check !menu', weight: 10 },
+  { type: 'compliment', template: 'Glad you\'re enjoying the show, {{username}} -- !menu has options', weight: 8 },
+  // Questions → point to commands
+  { type: 'question', template: 'Most features are listed in !commands', weight: 10 },
+  { type: 'question', template: 'Check !menu for available options with prices', weight: 9 },
+  // Excitement → redirect
+  { type: 'excitement', template: 'So glad you\'re enjoying it! Check !menu for more', weight: 10 },
+  { type: 'excitement', template: 'More options in !menu', weight: 9 },
+  // Farewell
+  { type: 'farewell', template: 'See you, {{username}} -- !menu when you return', weight: 10 },
+  { type: 'farewell', template: 'Bye {{username}} -- !menu', weight: 9 },
+];
+
+// ── Helper: resolve template placeholders ──
+function resolveTemplate(tpl, vars) {
+  var result = tpl;
+  if (vars.username) result = result.replace(/\{\{username\}\}/g, vars.username);
+  if (vars.amount) result = result.replace(/\{\{amount\}\}/g, vars.amount);
+  if (vars.item) result = result.replace(/\{\{item\}\}/g, vars.item);
+  if (vars.count) result = result.replace(/\{\{count\}\}/g, vars.count);
+  return result;
+}
+
+// ── Get merged pool: settings table + built-in defaults ──
+function getNotificationPool() {
+  var raw = $settings.notificationTemplates;
+  if (raw && Array.isArray(raw) && raw.length > 0) {
+    return raw.map(function(e) {
+      return { type: String(e[0] || '').trim(), template: String(e[1] || '').trim(), weight: Number(e[2]) || 1 };
+    }).filter(function(e) { return e.type && e.template; });
+  }
+  return NOTIFICATION_DEFAULTS;
+}
+
+// ── Get reply templates pool ──
+function getReplyPool() {
+  var raw = $settings.notificationReplyTemplates;
+  if (raw && Array.isArray(raw) && raw.length > 0) {
+    return raw.map(function(e) {
+      return { type: String(e[0] || '').trim(), template: String(e[1] || '').trim(), weight: Number(e[2]) || 1 };
+    }).filter(function(e) { return e.type && e.template; });
+  }
+  return REPLY_TEMPLATES;
+}
+
+// ── Weighted random pick from pool ──
+function weightedPick(pool) {
+  if (!pool || pool.length === 0) return null;
+  var totalWeight = 0, i;
+  for (i = 0; i < pool.length; i++) totalWeight += pool[i].weight;
+  var r = Math.random() * totalWeight;
+  var accum = 0;
+  for (i = 0; i < pool.length; i++) {
+    accum += pool[i].weight;
+    if (r < accum) return pool[i];
+  }
+  return pool[pool.length - 1];
+}
+
+// ── Pick a random notification from the rolling pool ──
+function pickRandomNotification(vars) {
+  var pool = getNotificationPool();
+  var picked = weightedPick(pool);
+  if (!picked) return null;
+  return {
+    text: resolveTemplate(picked.template, vars || {}),
+    type: picked.type,
+  };
+}
+
+// ── Pick a contextually-matched reply from the REPLY pool ──
+function pickContextualNotification(messageType, vars) {
+  var pool = getReplyPool();
+  // Filter pool to matching type, fall back to full reply pool if none match
+  var filtered = pool.filter(function(e) { return e.type === messageType; });
+  if (filtered.length === 0) filtered = pool;
+  var picked = weightedPick(filtered);
+  if (!picked) return null;
+  return {
+    text: resolveTemplate(picked.template, vars || {}),
+    type: picked.type,
+  };
+}
+
+// ── Add notification to rolling queue ──
+function addNotification(text, type, mode, toUsername) {
+  var maxEntries = $settings.notificationCount || 5;
+  var queue = $kv.get(NOTIFICATION_QUEUE_KEY, []);
+  var entry = { text: text, type: type || 'general', timestamp: Date.now(), mode: mode || 'auto' };
+  if (toUsername) entry.toUsername = toUsername;
+  queue.push(entry);
+  // Keep only the last maxEntries
+  while (queue.length > maxEntries) queue.shift();
+  $kv.set(NOTIFICATION_QUEUE_KEY, queue);
+
+  // Emit to overlay if enabled
+  if ($settings.overlayNotificationsEnabled !== false) {
+    $overlay.emit('notification', {
+      text: text,
+      type: type || 'general',
+      mode: mode || 'auto',
+      queue: queue,
+    });
+  }
+
+  // Send as a chat notice — privately for replies, publicly for events/auto
+  if (toUsername) {
+    $room.sendNotice(text, { toUsername: toUsername });
+  } else {
+    $room.sendNotice(text);
+  }
+}
+
+// ── Get current notification queue ──
+function getNotificationQueue() {
+  return $kv.get(NOTIFICATION_QUEUE_KEY, []);
+}
+
+// ── Clear notification queue ──
+function clearNotificationQueue() {
+  $kv.set(NOTIFICATION_QUEUE_KEY, []);
+}
+
+// ── Start auto-mode timer with random interval between min/max ──
+function startNotificationAutoTimer() {
+  var min = Math.max(Number($settings.notificationAutoIntervalMin) || 60, 60);
+  var max = Math.max(Number($settings.notificationAutoIntervalMax) || 300, 60);
+  if (max < min) max = min;
+  var interval = Math.floor(Math.random() * (max - min + 1)) + min;
+  // Cancel any existing auto timer first
+  stopNotificationAutoTimer();
+  $callback.create(NOTIFICATION_AUTO_LABEL, interval, false);
+}
+
+// ── Stop auto-mode timer ──
+function stopNotificationAutoTimer() {
+  $callback.cancel(NOTIFICATION_AUTO_LABEL);
+}
+
+// ── Execute one auto-mode notification tick ──
+function doNotificationAutoTick() {
+  var notif = pickRandomNotification({ username: $room.owner || 'there' });
+  if (notif) {
+    addNotification(notif.text, notif.type, 'auto');
+  }
+  // Re-schedule next tick with new random interval
+  startNotificationAutoTimer();
+}
+
+// ── Detect message type from chat text for reply-mode ──
+function detectMessageType(body) {
+  var lower = (body || '').toLowerCase().trim();
+  if (!lower) return null;
+  // Greetings
+  if (/^(hi+|hell+o+|hey+|yoo?|sup|howdy|good (morning|evening|afternoon|day))\b/i.test(lower)) return 'greeting';
+  // Farewells
+  if (/^(bye+|goodbye+|gotta go|see you|talk to you|later|cya|leave)/i.test(lower)) return 'farewell';
+  // Compliments
+  if (/\b(cute|pretty|hot|sexy|beautiful|gorgeous|stunning|lovely|adorable|handsome|beauty|hottie)\b/i.test(lower)) return 'compliment';
+  // Questions
+  if (/\?/.test(lower) || /^(what|how|why|when|where|who|can |could |would |will |do you|are you|is it|is there)/i.test(lower)) return 'question';
+  // Requests (no ? needed for explicit request language)
+  if (/\b(please |can you|could you|will you|would you|show |dance |sing |play |do a |do the|maybe |wish |want )/i.test(lower)) return 'request';
+  // Requests that need ? to disambiguate from general chat
+  if (/\b(dance|sing|song|show|play|perform|tip |flash|smile|talk|role|game)\b/i.test(lower) && /\?/.test(lower)) return 'request';
+  // Excitement
+  if (/\b(wow|nice|amazing|incredible|awesome|fantastic|great|love it|perfect|goddess|queen|best|fire|lit)\b/i.test(lower)) return 'excitement';
+  return null;
+}
+
+// ── Reset all notification settings to schema defaults ──
+function resetNotificationSettings() {
+  $settings.notificationCount = 5;
+  $settings.notificationAutoEnabled = true;
+  $settings.notificationAutoIntervalMin = 60;
+  $settings.notificationAutoIntervalMax = 300;
+  $settings.notificationReplyEnabled = true;
+  $settings.overlayNotificationsEnabled = false;
+  // Reset templates to built-in defaults
+  var defaults = NOTIFICATION_DEFAULTS.map(function(e) {
+    return [e.type, e.template, String(e.weight)];
+  });
+  $settings.notificationTemplates = defaults;
+  // Reset reply templates
+  var replyDefaults = REPLY_TEMPLATES.map(function(e) {
+    return [e.type, e.template, String(e.weight)];
+  });
+  $settings.notificationReplyTemplates = replyDefaults;
+  // Clear queue
+  clearNotificationQueue();
+  // Restart or stop auto timer
+  stopNotificationAutoTimer();
+  if ($settings.notificationAutoEnabled) {
+    startNotificationAutoTimer();
+  }
+  notifyBroadcaster('Notification settings reset to defaults.');
 }

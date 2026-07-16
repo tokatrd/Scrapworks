@@ -44,6 +44,14 @@ onAppSettingsChange = function () {
     stopPanelCycle();
   }
 
+  // Handle notification auto timer toggle
+  var notifAutoEnabled = $settings.notificationAutoEnabled !== false;
+  if (notifAutoEnabled) {
+    startNotificationAutoTimer();
+  } else {
+    stopNotificationAutoTimer();
+  }
+
   if ($settings.overlayEnabled !== false) {
     $overlay.emit('settingsChange', {
       tipGoal: newGoal,

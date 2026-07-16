@@ -29,6 +29,20 @@
     "required": false
   },
   {
+    "name": "hiddenCamPrice",
+    "description": "Minimum tokens needed for auto-granted hidden cam access",
+    "type": "number",
+    "default": 100,
+    "required": false
+  },
+  {
+    "name": "hiddenCamMessage",
+    "description": "Message shown to users when hidden cam is active",
+    "type": "text",
+    "default": "Hidden cam is active! Tip {{price}}+ tokens for access.",
+    "required": false
+  },
+  {
     "name": "tipMenuEnabled",
     "description": "Enable the itemised tip menu with discounts",
     "type": "boolean",
@@ -154,6 +168,101 @@
       {"name": "Animated (flash)", "value": "animate"}
     ],
     "default": "auto",
+    "required": false
+  },
+  {
+    "name": "notificationCount",
+    "description": "Maximum number of visible notifications in the rolling queue",
+    "type": "number",
+    "default": 5,
+    "required": false
+  },
+  {
+    "name": "notificationAutoEnabled",
+    "description": "Enable auto-mode: periodically posts random notifications at random intervals",
+    "type": "boolean",
+    "default": true,
+    "required": false
+  },
+  {
+    "name": "notificationAutoIntervalMin",
+    "description": "Minimum seconds between auto notifications (minimum 60)",
+    "type": "number",
+    "default": 60,
+    "required": false
+  },
+  {
+    "name": "notificationAutoIntervalMax",
+    "description": "Maximum seconds between auto notifications (minimum 60)",
+    "type": "number",
+    "default": 300,
+    "required": false
+  },
+  {
+    "name": "notificationReplyEnabled",
+    "description": "Enable reply-mode: posts context-aware notifications matching user chat messages",
+    "type": "boolean",
+    "default": true,
+    "required": false
+  },
+  {
+    "name": "overlayNotificationsEnabled",
+    "description": "Show rolling notifications in the OBS broadcast overlay",
+    "type": "boolean",
+    "default": false,
+    "required": false
+  },
+  {
+    "name": "notificationTemplates",
+    "description": "Custom notification message templates (type, template text, weight)",
+    "type": "table",
+    "columns": ["Type", "Template", "Weight"],
+    "default": [
+      ["tip", "{{username}} just tipped {{amount}} tokens! \u2726", 10],
+      ["tip", "Thank you {{username}} for the {{amount}} token tip! \u2661", 8],
+      ["follow", "New follower: {{username}}! \u2726 Welcome to the show!", 10],
+      ["follow", "{{username}} just followed! Give them a warm welcome!", 8],
+      ["enter", "{{username}} has entered the room! \u2192", 8],
+      ["enter", "Welcome back, {{username}}! Good to see you!", 6],
+      ["fanclub", "{{username}} joined the fanclub! Thank you so much! \u2726", 8],
+      ["fanclub", "{{username}} renewed their fanclub membership! \u2661", 6],
+      ["media", "{{username}} purchased {{item}}! Thank you for your support!", 8],
+      ["goal", "\u2726 Goal reached! {{amount}} tokens total! Thank you everyone!", 5],
+      ["prompt", "Don't forget to check !menu", 8],
+      ["prompt", "Having fun? !menu has all the options", 7],
+      ["prompt", "Feeling generous? Every tip is appreciated! \u2726", 6],
+      ["prompt", "Looking for something? Check !menu", 7],
+      ["prompt", "New here? !commands for everything available", 7],
+      ["prompt", "Your support makes the show better! \u2661", 5],
+      ["prompt", "Loving the vibes tonight! \u2726", 6],
+      ["prompt", "Don't be shy - say hi! !commands for options", 6],
+      ["prompt", "Curious about discounts? !discounts to check", 5],
+      ["prompt", "Stay tuned - more fun coming up! \u2726", 5]
+    ],
+    "required": false
+  },
+  {
+    "name": "notificationReplyTemplates",
+    "description": "Context-aware reply message templates (type, template text, weight). These guide user behavior.",
+    "type": "table",
+    "columns": ["Type", "Template", "Weight"],
+    "default": [
+      ["request", "Don't forget to check !menu", 10],
+      ["request", "!menu has everything listed with prices", 9],
+      ["request", "There's an option for that in !menu", 9],
+      ["request", "Check !menu for all available options", 8],
+      ["request", "All options are listed in !menu", 7],
+      ["greeting", "Hi {{username}} -- check !menu and !commands", 10],
+      ["greeting", "Welcome {{username}} -- !menu for options", 9],
+      ["compliment", "Thank you, {{username}} -- check !menu", 10],
+      ["compliment", "Glad you're enjoying the show, {{username}} -- !menu has options", 8],
+      ["question", "Most features are listed in !commands", 10],
+      ["question", "Check !menu for available options with prices", 9],
+      ["excitement", "So glad you're enjoying it! Check !menu for more", 10],
+      ["excitement", "More options in !menu", 9],
+      ["farewell", "See you, {{username}} -- !menu when you return", 10],
+      ["farewell", "Bye {{username}} -- !menu", 9]
+    ],
     "required": false
   }
 ]

@@ -30,4 +30,10 @@ onCallback = function () {
     doPanelCycleTick();
     return;
   }
+
+  // Notification auto tick
+  if (label === NOTIFICATION_AUTO_LABEL) {
+    doNotificationAutoTick();
+    return;
+  }
 };

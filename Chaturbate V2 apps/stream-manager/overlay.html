@@ -145,6 +145,57 @@
     font-size: 13px;
     color: #888;
   }
+
+  /* ── Rolling Notification Widget ── */
+  .notif-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 320px;
+    pointer-events: none;
+  }
+  .notif-item {
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(4px);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #fff;
+    border-left: 3px solid #888;
+    transform: translateX(120%);
+    animation: notifSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    pointer-events: auto;
+  }
+  .notif-item.type-tip      { border-left-color: #ffd700; }
+  .notif-item.type-follow   { border-left-color: #6bcb77; }
+  .notif-item.type-enter    { border-left-color: #1e88e5; }
+  .notif-item.type-fanclub  { border-left-color: #8e24aa; }
+  .notif-item.type-media    { border-left-color: #ff7043; }
+  .notif-item.type-goal     { border-left-color: #ffd700; background: rgba(255, 215, 0, 0.15); }
+  .notif-item.type-greeting    { border-left-color: #e040fb; }
+  .notif-item.type-compliment  { border-left-color: #ff4081; }
+  .notif-item.type-question    { border-left-color: #00bcd4; }
+  .notif-item.type-request     { border-left-color: #ffb300; }
+  .notif-item.type-farewell    { border-left-color: #78909c; }
+  .notif-item.type-excitement  { border-left-color: #76ff03; }
+
+  @keyframes notifSlideIn {
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  @keyframes notifFadeOut {
+    from { transform: translateX(0); opacity: 1; }
+    to   { transform: translateX(120%); opacity: 0; }
+  }
+  .notif-item.fade-out {
+    animation: notifFadeOut 0.35s ease forwards;
+  }
 </style>
 </head>
 <body>
@@ -160,6 +211,9 @@
   <div class="follower-alert" id="followerAlert"></div>
   <div class="goal-reached" id="goalReached">GOAL REACHED!</div>
 </div>
+
+<!-- Rolling Notification Widget -->
+<div class="notif-container" id="notifContainer"></div>
 
 <!-- Anon Converter Blackout Banner -->
 <div class="anon-banner" id="anonBanner">
@@ -242,6 +296,33 @@
     }
   }
 
+  function addOverlayNotification(text, type) {
+    var container = document.getElementById('notifContainer');
+    if (!container) return;
+    var el = document.createElement('div');
+    el.className = 'notif-item type-' + (type || 'general');
+    el.textContent = text;
+    container.appendChild(el);
+    // Enforce max 5 visible items
+    while (container.children.length > 5) {
+      var oldest = container.children[0];
+      oldest.classList.add('fade-out');
+      (function(o) { setTimeout(function() { if (o.parentNode) o.parentNode.removeChild(o); }, 400); })(oldest);
+    }
+    // Auto-remove after 12 seconds
+    setTimeout(function() {
+      if (el.parentNode) {
+        el.classList.add('fade-out');
+        (function(e) { setTimeout(function() { if (e.parentNode) e.parentNode.removeChild(e); }, 400); })(el);
+      }
+    }, 12000);
+  }
+
+  function clearOverlayNotifications() {
+    var container = document.getElementById('notifContainer');
+    if (container) container.innerHTML = '';
+  }
+
   // Exposed event handlers for the $overlay.on() system
   window.__overlayEvents = {
     onTip: function (data) {
@@ -266,6 +347,12 @@
     },
     onAnonRestore: function () {
       hideAnonBlackout();
+    },
+    onNotification: function (data) {
+      if (data && data.text) addOverlayNotification(data.text, data.type);
+    },
+    onNotificationClear: function () {
+      clearOverlayNotifications();
     },
   };
 })();

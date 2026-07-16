@@ -6,13 +6,13 @@ onChatMessage = function () {
 
 if (cmd === '!commands') {
     $room.sendNotice(
-      'Commands: !tipmenu, !goal, !hiddencam, !discounts, !anon, !top',
+      'Commands: !menu, !goal, !hiddencam, !discounts, !anon, !top, !notif',
       { toUsername: $user.username }
     );
     return;
   }
 
-  if (cmd === '!tipmenu') {
+  if (cmd === '!menu' || cmd === '!tipmenu') {
     var menuText = formatTipMenuText($user.username);
     $room.sendNotice(menuText, { toUsername: $user.username });
     return;
@@ -213,5 +213,59 @@ if (cmd === '!commands') {
     }
     $room.sendNotice(lines.join(' | '), { toUsername: $user.username });
     return;
+  }
+
+  // ============================================================
+  // !notif command — notification control
+  // ============================================================
+  if (cmd === '!notif') {
+    var sub = parts[1];
+
+    if (!sub) {
+      var autoEnabled = $settings.notificationAutoEnabled !== false;
+      var autoMin = Math.max(Number($settings.notificationAutoIntervalMin) || 60, 60);
+      var autoMax = Math.max(Number($settings.notificationAutoIntervalMax) || 300, 60);
+      var replyEnabled = $settings.notificationReplyEnabled !== false;
+      var overlayOn = $settings.overlayNotificationsEnabled !== false;
+      var queue = getNotificationQueue();
+      $room.sendNotice(
+        'Notif: Auto ' + (autoEnabled ? 'ON' : 'OFF') + ' (' + autoMin + '-' + autoMax + 's) | ' +
+        'Reply ' + (replyEnabled ? 'ON' : 'OFF') + ' | ' +
+        'Overlay ' + (overlayOn ? 'ON' : 'OFF') + ' | ' +
+        'Queue: ' + queue.length,
+        { toUsername: $user.username }
+      );
+      return;
+    }
+
+    if (sub === 'reset') {
+      if ($user.username !== $room.owner) {
+        $room.sendNotice('Only the broadcaster can reset notification settings.', { toUsername: $user.username });
+        return;
+      }
+      resetNotificationSettings();
+      $room.sendNotice('Notification settings reset to defaults.', { toUsername: $user.username });
+      return;
+    }
+  }
+
+  // ============================================================
+  // Reply-mode: context-aware notification matching
+  // ============================================================
+  if ($settings.notificationReplyEnabled !== false && $user.username !== $room.owner) {
+    var msgType = detectMessageType(body);
+    if (msgType) {
+      // Rate limit: max 1 reply notification per user per 30 seconds
+      var rateKey = 'notif_reply_' + $user.username;
+      var lastReply = $kv.get(rateKey, 0);
+      var now = Date.now();
+      if (now - lastReply > 30000) {
+        $kv.set(rateKey, now);
+        var replyNotif = pickContextualNotification(msgType, { username: $user.username });
+        if (replyNotif) {
+          addNotification(replyNotif.text, replyNotif.type, 'reply', $user.username);
+        }
+      }
+    }
   }
 };

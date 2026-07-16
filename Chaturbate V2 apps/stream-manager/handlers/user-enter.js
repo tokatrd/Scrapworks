@@ -40,4 +40,7 @@ onUserEnter = function () {
   if (messages.length > 0) {
     $room.sendNotice(messages.join(' '), { toUsername: $user.username });
   }
+
+  // Add rolling notification for user enter
+  addNotification($user.username + ' has entered the room.', 'enter', 'event');
 };

@@ -96,6 +96,12 @@ var $settings = {
   progressTheme: 'coral-ember',
   progressBarStyle: 'bar',
   progressTextMode: 'auto',
+  notificationCount: 5,
+  notificationAutoEnabled: true,
+  notificationAutoIntervalMin: 60,
+  notificationAutoIntervalMax: 300,
+  notificationReplyEnabled: true,
+  overlayNotificationsEnabled: false,
 };
 
 var $room = {
@@ -213,6 +219,8 @@ var DEFAULT_ANON_DURATION = 15;
 var PANEL_CYCLE_LABEL = 'panelCycleTick';
 var PANEL_VIEW_KEY = 'panelCurrentView';
 var ANON_BLACKLIST_KEY = 'anonBlacklist';
+var NOTIFICATION_QUEUE_KEY = 'notificationQueue';
+var NOTIFICATION_AUTO_LABEL = 'notificationAutoTick';
 
 // Progress bar constants (mirrored from shared.js)
 var PROGRESS_STYLE_KEY = 'progressStyle';
@@ -256,8 +264,6 @@ var BAR_STYLES = [
 ];
 
 var BAR_CHAR_COUNT = 10;
-
-var loadHandlersCalled = false;
 
 // ============================================================
 // Utility: determine which discount groups a user belongs to
@@ -682,6 +688,183 @@ function resetAnimateTick() {
 }
 
 // ============================================================
+// Rolling Chat Notification Utilities (mirrored from shared.js)
+// ============================================================
+
+var NOTIFICATION_DEFAULTS = [
+  { type: 'tip',        template: '{{username}} just tipped {{amount}} tokens! \u2726',                    weight: 10 },
+  { type: 'tip',        template: 'Thank you {{username}} for the {{amount}} token tip! \u2661',           weight: 8 },
+  { type: 'follow',     template: 'New follower: {{username}}! \u2726 Welcome to the show!',               weight: 10 },
+  { type: 'follow',     template: '{{username}} just followed! Give them a warm welcome!',                 weight: 8 },
+  { type: 'enter',      template: '{{username}} has entered the room! \u2192',                             weight: 8 },
+  { type: 'enter',      template: 'Welcome back, {{username}}! Good to see you!',                          weight: 6 },
+  { type: 'fanclub',    template: '{{username}} joined the fanclub! Thank you so much! \u2726',            weight: 8 },
+  { type: 'fanclub',    template: '{{username}} renewed their fanclub membership! \u2661',                 weight: 6 },
+  { type: 'media',      template: '{{username}} purchased {{item}}! Thank you for your support!',          weight: 8 },
+  { type: 'goal',       template: '\u2726 Goal reached! {{amount}} tokens total! Thank you everyone!',     weight: 5 },
+  { type: 'prompt',     template: 'Don\'t forget to check !menu',                                          weight: 8 },
+  { type: 'prompt',     template: 'Having fun? !menu has all the options',                                 weight: 7 },
+  { type: 'prompt',     template: 'Feeling generous? Every tip is appreciated! \u2726',                   weight: 6 },
+  { type: 'prompt',     template: 'Looking for something? Check !menu',                                    weight: 7 },
+  { type: 'prompt',     template: 'New here? !commands for everything available',                          weight: 7 },
+  { type: 'prompt',     template: 'Your support makes the show better! \u2661',                            weight: 5 },
+  { type: 'prompt',     template: 'Loving the vibes tonight! \u2726',                                      weight: 6 },
+  { type: 'prompt',     template: 'Don\'t be shy - say hi! !commands for options',                         weight: 6 },
+  { type: 'prompt',     template: 'Curious about discounts? !discounts to check',                          weight: 5 },
+  { type: 'prompt',     template: 'Stay tuned - more fun coming up! \u2726',                               weight: 5 },
+];
+
+var REPLY_TEMPLATES = [
+  { type: 'request',    template: 'Don\'t forget to check !menu', weight: 10 },
+  { type: 'request',    template: '!menu has everything listed with prices', weight: 9 },
+  { type: 'request',    template: 'There\'s an option for that in !menu', weight: 9 },
+  { type: 'request',    template: 'Check !menu for all available options', weight: 8 },
+  { type: 'request',    template: 'All options are listed in !menu', weight: 7 },
+  { type: 'greeting',   template: 'Hi {{username}} -- check !menu and !commands', weight: 10 },
+  { type: 'greeting',   template: 'Welcome {{username}} -- !menu for options', weight: 9 },
+  { type: 'compliment', template: 'Thank you, {{username}} -- check !menu', weight: 10 },
+  { type: 'compliment', template: 'Glad you\'re enjoying the show, {{username}} -- !menu has options', weight: 8 },
+  { type: 'question',   template: 'Most features are listed in !commands', weight: 10 },
+  { type: 'question',   template: 'Check !menu for available options with prices', weight: 9 },
+  { type: 'excitement', template: 'So glad you\'re enjoying it! Check !menu for more', weight: 10 },
+  { type: 'excitement', template: 'More options in !menu', weight: 9 },
+  { type: 'farewell',   template: 'See you, {{username}} -- !menu when you return', weight: 10 },
+  { type: 'farewell',   template: 'Bye {{username}} -- !menu', weight: 9 },
+];
+
+function resolveTemplate(tpl, vars) {
+  var result = tpl;
+  if (vars.username) result = result.replace(/\{\{username\}\}/g, vars.username);
+  if (vars.amount) result = result.replace(/\{\{amount\}\}/g, vars.amount);
+  if (vars.item) result = result.replace(/\{\{item\}\}/g, vars.item);
+  if (vars.count) result = result.replace(/\{\{count\}\}/g, vars.count);
+  return result;
+}
+
+function getNotificationPool() {
+  var raw = $settings.notificationTemplates;
+  if (raw && Array.isArray(raw) && raw.length > 0) {
+    return raw.map(function(e) {
+      return { type: String(e[0] || '').trim(), template: String(e[1] || '').trim(), weight: Number(e[2]) || 1 };
+    }).filter(function(e) { return e.type && e.template; });
+  }
+  return NOTIFICATION_DEFAULTS;
+}
+
+function getReplyPool() {
+  var raw = $settings.notificationReplyTemplates;
+  if (raw && Array.isArray(raw) && raw.length > 0) {
+    return raw.map(function(e) {
+      return { type: String(e[0] || '').trim(), template: String(e[1] || '').trim(), weight: Number(e[2]) || 1 };
+    }).filter(function(e) { return e.type && e.template; });
+  }
+  return REPLY_TEMPLATES;
+}
+
+function weightedPick(pool) {
+  if (!pool || pool.length === 0) return null;
+  var totalWeight = 0, i;
+  for (i = 0; i < pool.length; i++) totalWeight += pool[i].weight;
+  var r = Math.random() * totalWeight;
+  var accum = 0;
+  for (i = 0; i < pool.length; i++) {
+    accum += pool[i].weight;
+    if (r < accum) return pool[i];
+  }
+  return pool[pool.length - 1];
+}
+
+function pickRandomNotification(vars) {
+  var pool = getNotificationPool();
+  var picked = weightedPick(pool);
+  if (!picked) return null;
+  return { text: resolveTemplate(picked.template, vars || {}), type: picked.type };
+}
+
+function pickContextualNotification(messageType, vars) {
+  var pool = getReplyPool();
+  var filtered = pool.filter(function(e) { return e.type === messageType; });
+  if (filtered.length === 0) filtered = pool;
+  var picked = weightedPick(filtered);
+  if (!picked) return null;
+  return { text: resolveTemplate(picked.template, vars || {}), type: picked.type };
+}
+
+function addNotification(text, type, mode, toUsername) {
+  var maxEntries = $settings.notificationCount || 5;
+  var queue = $kv.get(NOTIFICATION_QUEUE_KEY, []);
+  var entry = { text: text, type: type || 'general', timestamp: Date.now(), mode: mode || 'auto' };
+  if (toUsername) entry.toUsername = toUsername;
+  queue.push(entry);
+  while (queue.length > maxEntries) queue.shift();
+  $kv.set(NOTIFICATION_QUEUE_KEY, queue);
+  var logTarget = toUsername ? ('->' + toUsername) : '';
+  console.log('[NOTIF ' + (mode || 'auto') + '] [' + (type || 'general') + '] ' + text + ' ' + logTarget);
+  if (toUsername) {
+    $room.sendNotice(text, { toUsername: toUsername });
+  } else {
+    $room.sendNotice(text);
+  }
+  if ($settings.overlayNotificationsEnabled !== false) {
+    $overlay.emit('notification', { text: text, type: type || 'general', mode: mode || 'auto', queue: queue });
+  }
+}
+
+function getNotificationQueue() {
+  return $kv.get(NOTIFICATION_QUEUE_KEY, []);
+}
+
+function clearNotificationQueue() {
+  $kv.set(NOTIFICATION_QUEUE_KEY, []);
+}
+
+function startNotificationAutoTimer() {
+  var min = Math.max(Number($settings.notificationAutoIntervalMin) || 60, 60);
+  var max = Math.max(Number($settings.notificationAutoIntervalMax) || 300, 60);
+  if (max < min) max = min;
+  var interval = Math.floor(Math.random() * (max - min + 1)) + min;
+  stopNotificationAutoTimer();
+  $callback.create(NOTIFICATION_AUTO_LABEL, interval, false);
+  console.log('[NOTIF_AUTO] Timer started with ' + interval + 's interval');
+}
+
+function stopNotificationAutoTimer() {
+  $callback.cancel(NOTIFICATION_AUTO_LABEL);
+}
+
+function doNotificationAutoTick() {
+  var notif = pickRandomNotification({ username: $room.owner || 'there' });
+  if (notif) addNotification(notif.text, notif.type, 'auto');
+  startNotificationAutoTimer();
+}
+
+function detectMessageType(body) {
+  var lower = (body || '').toLowerCase().trim();
+  if (!lower) return null;
+  if (/^(hi+|hell+o+|hey+|yoo?|sup|howdy|good (morning|evening|afternoon|day))\b/i.test(lower)) return 'greeting';
+  if (/^(bye+|goodbye+|gotta go|see you|talk to you|later|cya|leave)/i.test(lower)) return 'farewell';
+  if (/\b(cute|pretty|hot|sexy|beautiful|gorgeous|stunning|lovely|adorable|handsome|beauty|hottie)\b/i.test(lower)) return 'compliment';
+  if (/\?/.test(lower) || /^(what|how|why|when|where|who|can |could |would |will |do you|are you|is it|is there)/i.test(lower)) return 'question';
+  if (/\b(please |can you|could you|will you|would you|show |dance |sing |play |do a |do the|maybe |wish |want )/i.test(lower)) return 'request';
+  if (/\b(dance|sing|song|show|play|perform|tip |flash|smile|talk|role|game)\b/i.test(lower) && /\?/.test(lower)) return 'request';
+  if (/\b(wow|nice|amazing|incredible|awesome|fantastic|great|love it|perfect|goddess|queen|best|fire|lit)\b/i.test(lower)) return 'excitement';
+  return null;
+}
+
+function resetNotificationSettings() {
+  $settings.notificationCount = 5;
+  $settings.notificationAutoEnabled = true;
+  $settings.notificationAutoIntervalMin = 60;
+  $settings.notificationAutoIntervalMax = 300;
+  $settings.notificationReplyEnabled = true;
+  $settings.overlayNotificationsEnabled = false;
+  clearNotificationQueue();
+  stopNotificationAutoTimer();
+  if ($settings.notificationAutoEnabled) startNotificationAutoTimer();
+  notifyBroadcaster('Notification settings reset to defaults.');
+}
+
+// ============================================================
 // Handlers
 // ============================================================
 
@@ -691,8 +874,6 @@ var onBroadcastPanelUpdate, onFanclubJoin, onMediaPurchase, onCallback, onShortc
 var onRoomStatusChange, onBroadcastStart, onBroadcastStop, onAppSettingsChange;
 
 function loadHandlers() {
-  loadHandlersCalled = true;
-
   onAppStart = function () {
     if ($kv.get(TIP_GOAL_KEY) === undefined) $kv.set(TIP_GOAL_KEY, 1000);
     if ($kv.get(SESSION_TIPS_KEY) === undefined) $kv.set(SESSION_TIPS_KEY, 0);
@@ -709,6 +890,9 @@ function loadHandlers() {
     if ($settings.anonConverterEnabled !== false) {
       startAnonConverter();
       startPanelCycle();
+    }
+    if ($settings.notificationAutoEnabled !== false) {
+      startNotificationAutoTimer();
     }
     notifyBroadcaster(APP_NAME + ' v' + APP_VERSION + ' started.');
   };
@@ -745,6 +929,7 @@ function loadHandlers() {
       $limitcam.add([$user.username]);
     }
     if (msgs.length > 0) $room.sendNotice(msgs.join(' '), { toUsername: $user.username });
+    addNotification($user.username + ' has entered the room.', 'enter', 'event');
   };
 
   onUserLeave = function () {
@@ -757,6 +942,7 @@ function loadHandlers() {
     var count = incrCounter(NEW_FOLLOWERS_KEY, 1);
     $room.sendNotice('Thank you for the follow, ' + $user.username + '!');
     notifyBroadcaster(count + ' new follower' + (count === 1 ? '' : 's') + ' this broadcast.');
+    addNotification($user.username + ' just followed!', 'follow', 'event');
     if ($settings.overlayEnabled !== false) $overlay.emit('follow', { username: $user.username, total: count });
   };
 
@@ -774,10 +960,10 @@ function loadHandlers() {
     var cmd = parts[0];
 
     if (cmd === '!commands') {
-      $room.sendNotice('Commands: !tipmenu, !goal, !hiddencam, !discounts, !anon, !top', { toUsername: $user.username });
+      $room.sendNotice('Commands: !menu, !goal, !hiddencam, !discounts, !anon, !top, !notif', { toUsername: $user.username });
       return;
     }
-    if (cmd === '!tipmenu') {
+    if (cmd === '!menu' || cmd === '!tipmenu') {
       $room.sendNotice(formatTipMenuText($user.username), { toUsername: $user.username });
       return;
     }
@@ -905,9 +1091,50 @@ function loadHandlers() {
       if (isNaN(count) || count < 1) count = 5;
       var top = getTopTippers(count);
       if (top.length === 0) { $room.sendNotice('No tippers yet.', { toUsername: $user.username }); return; }
-      var lines = top.map(function(t, i) { return (i + 1) + '. ' + t.username + ' — ' + t.tokens + ' tokens'; });
+      var lines = top.map(function(t, i) { return (i + 1) + '. ' + t.username + ' \u2014 ' + t.tokens + ' tokens'; });
       $room.sendNotice('Top ' + top.length + ' tippers: ' + lines.join(' | '), { toUsername: $user.username });
       return;
+    }
+
+    if (cmd === '!notif') {
+      var sub = parts[1];
+      if (!sub) {
+        var autoEnabled = $settings.notificationAutoEnabled !== false;
+        var autoMin = Math.max(Number($settings.notificationAutoIntervalMin) || 60, 60);
+        var autoMax = Math.max(Number($settings.notificationAutoIntervalMax) || 300, 60);
+        var replyEnabled = $settings.notificationReplyEnabled !== false;
+        var overlayOn = $settings.overlayNotificationsEnabled !== false;
+        var queue = getNotificationQueue();
+        $room.sendNotice(
+          'Notif: Auto ' + (autoEnabled ? 'ON' : 'OFF') + ' (' + autoMin + '-' + autoMax + 's) | ' +
+          'Reply ' + (replyEnabled ? 'ON' : 'OFF') + ' | Overlay ' + (overlayOn ? 'ON' : 'OFF') + ' | Queue: ' + queue.length,
+          { toUsername: $user.username }
+        );
+        return;
+      }
+      if (sub === 'reset') {
+        if ($user.username !== $room.owner) {
+          $room.sendNotice('Only the broadcaster can reset notification settings.', { toUsername: $user.username });
+          return;
+        }
+        resetNotificationSettings();
+        $room.sendNotice('Notification settings reset to defaults.', { toUsername: $user.username });
+        return;
+      }
+    }
+
+    if ($settings.notificationReplyEnabled !== false && $user.username !== $room.owner) {
+      var msgType = detectMessageType(body);
+      if (msgType) {
+        var rateKey = 'notif_reply_' + $user.username;
+        var lastReply = $kv.get(rateKey, 0);
+        var now = Date.now();
+        if (now - lastReply > 30000) {
+          $kv.set(rateKey, now);
+          var replyNotif = pickContextualNotification(msgType, { username: $user.username });
+          if (replyNotif) addNotification(replyNotif.text, replyNotif.type, 'reply', $user.username);
+        }
+      }
     }
   };
 
@@ -923,11 +1150,7 @@ function loadHandlers() {
   onTipReceived = function () {
     var tips = incrCounter(SESSION_TIPS_KEY, $tip.tokens);
     var goal = $kv.get(TIP_GOAL_KEY, 1000);
-    if (!$tip.isAnon) {
-      var msg = $user.username + ' just tipped ' + $tip.tokens + ' tokens!';
-      if ($tip.message) msg += ' "' + $tip.message + '"';
-      $room.sendNotice(msg);
-    }
+    // Non-anonymous announcements handled by addNotification below (avoids duplicate room notices)
     if (!$tip.isAnon) {
       var topTokens = $kv.get(TOP_TIP_TOKENS_KEY, 0);
       var currentUserTips = $kv.get('userTips_' + $user.username, 0);
@@ -946,6 +1169,11 @@ function loadHandlers() {
         $room.sendNotice($user.username + ' has been granted hidden cam access!', { toUsername: $user.username });
       }
     }
+    // Add rolling notification (single source of public tip announcements)
+    var tipText = ($tip.isAnon ? 'Someone' : $user.username)
+      + ' just tipped ' + $tip.tokens + ' tokens!';
+    if ($tip.message) tipText += ' "' + $tip.message + '"';
+    addNotification(tipText, 'tip', 'event');
     if (tips >= goal) {
       $room.sendNotice('Tip goal reached! Total: ' + tips + ' tokens! Thank you everyone!');
       $kv.set(SESSION_TIPS_KEY, 0);
@@ -1007,7 +1235,7 @@ function loadHandlers() {
       }
     } else if (view === 1) {
       row3_label = 'Anon Conv.';
-      row3_value = (anonActive ? 'ON' : 'OFF') + (anonBlackout ? ' [BLACKOUT]' : '') + ' (' + anonInterval + 's/' + anonDuration + 's)';
+      row3_value = (anonActive ? 'ON' : 'OFF') + (anonBlackout ? ' [BLACKOUT]' : '') + ' ' + anonCount + 'a/' + blCount + 'b';
     } else {
       row3_label = followers > 0 ? 'Followers' : 'Cam';
       row3_value = followers > 0 ? '' + followers : (hiddenCam ? 'Hidden' : 'Public');
@@ -1027,9 +1255,11 @@ function loadHandlers() {
 
   onFanclubJoin = function () {
     if ($fanclub.isNew) {
-      $room.sendNotice($user.username + ' has joined the fanclub! Welcome!');
+      // Public notice handled by addNotification (single source)
+      addNotification($user.username + ' joined the fanclub! Welcome!', 'fanclub', 'event');
     } else {
       notifyBroadcaster($user.username + ' has extended their fanclub membership.', { fontWeight: 'bolder' });
+      addNotification($user.username + ' renewed their fanclub membership!', 'fanclub', 'event');
     }
   };
 
@@ -1037,6 +1267,7 @@ function loadHandlers() {
     notifyBroadcaster('Media Purchase from ' + $user.username + ': ' +
       $media.name + ' (' + $media.type + ') \u2014 ' + $media.tokens + ' tokens spent.',
       { color: '#FFE0EA' });
+    addNotification($user.username + ' purchased ' + $media.name + '!', 'media', 'event');
   };
 
   onCallback = function () {
@@ -1051,6 +1282,7 @@ function loadHandlers() {
     if (label === ANON_CONVERTER_CB_LABEL) { doAnonConverterBlackout(); return; }
     if (label === ANON_CONVERTER_RESTORE_LABEL) { doAnonConverterRestore(); return; }
     if (label === PANEL_CYCLE_LABEL) { doPanelCycleTick(); return; }
+    if (label === NOTIFICATION_AUTO_LABEL) { doNotificationAutoTick(); return; }
   };
 
   onShortcut = function () {
@@ -1128,6 +1360,14 @@ function loadHandlers() {
       stopAnonConverter();
       stopPanelCycle();
     }
+
+    var notifAutoEnabled = $settings.notificationAutoEnabled !== false;
+    if (notifAutoEnabled) {
+      startNotificationAutoTimer();
+    } else {
+      stopNotificationAutoTimer();
+    }
+
     if ($settings.overlayEnabled !== false) $overlay.emit('settingsChange', { tipGoal: newGoal, overlayEnabled: $settings.overlayEnabled });
   };
 }
@@ -1377,7 +1617,60 @@ function simulation() {
   console.log('\n--- Trigger anon converter restore ---');
   simulateCallback(ANON_CONVERTER_RESTORE_LABEL);
 
-  // ── Phase 5: Go offline (cleanup) ──
+  // ── Phase 5: Notification Tests ──
+
+  console.log('\n=== ROLLING NOTIFICATION TESTS ===');
+
+  console.log('\n--- !notif (status) ---');
+  $user = Object.assign({}, $user, { username: 'alice' });
+  $message = { body: '!notif', bgColor: '', color: '', font: 'Default', isSpam: false, orig: '!notif' };
+  onChatMessage();
+
+  console.log('\n--- !notif reset (broadcaster) ---');
+  $user = Object.assign({}, $user, { username: $room.owner });
+  $message = { body: '!notif reset', bgColor: '', color: '', font: 'Default', isSpam: false, orig: '!notif reset' };
+  onChatMessage();
+
+  console.log('\n--- Reply mode: greeting message ---');
+  $user = Object.assign({}, $user, { username: 'frank', isFollower: true, isMod: false });
+  $message = { body: 'hey everyone!', bgColor: '', color: '', font: 'Default', isSpam: false, orig: 'hey everyone!' };
+  onChatMessage();
+
+  console.log('\n--- Reply mode: compliment message ---');
+  $user = Object.assign({}, $user, { username: 'george', isFollower: true, isMod: false });
+  $message = { body: 'you look so cute today!', bgColor: '', color: '', font: 'Default', isSpam: false, orig: 'you look so cute today!' };
+  onChatMessage();
+
+  console.log('\n--- Reply mode: question ---');
+  $user = Object.assign({}, $user, { username: 'helen', isFollower: false, isMod: false });
+  $message = { body: 'how are you doing?', bgColor: '', color: '', font: 'Default', isSpam: false, orig: 'how are you doing?' };
+  onChatMessage();
+
+  console.log('\n--- Reply mode: request (no question mark) ---');
+  $user = Object.assign({}, $user, { username: 'ivan', isFollower: true, isMod: false });
+  $message = { body: 'show me your dance', bgColor: '', color: '', font: 'Default', isSpam: false, orig: 'show me your dance' };
+  onChatMessage();
+
+  console.log('\n--- Reply mode: excitement ---');
+  $user = Object.assign({}, $user, { username: 'julia', isFollower: false, isMod: false });
+  $message = { body: 'wow amazing stream!', bgColor: '', color: '', font: 'Default', isSpam: false, orig: 'wow amazing stream!' };
+  onChatMessage();
+
+  console.log('\n--- Reply mode: farewell ---');
+  $user = Object.assign({}, $user, { username: 'kevin', isFollower: true, isMod: false });
+  $message = { body: 'bye gotta go', bgColor: '', color: '', font: 'Default', isSpam: false, orig: 'bye gotta go' };
+  onChatMessage();
+
+  console.log('\n--- Event: Fanclub Join (grace, new) ---');
+  $user = Object.assign({}, $user, { username: 'grace', isFollower: true, inFanclub: false });
+  $fanclub = { isNew: true };
+  onFanclubJoin();
+
+  console.log('\n--- Event: Media Purchase (grace) ---');
+  $media = { id: 'media_002', name: 'Video Pack #1', tokens: 200, type: 'videos' };
+  onMediaPurchase();
+
+  // ── Phase 6: Go offline (cleanup) ──
 
   console.log('\n=== CLEANUP ===');
 
