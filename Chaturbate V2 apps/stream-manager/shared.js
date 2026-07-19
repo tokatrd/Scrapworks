@@ -170,7 +170,7 @@ function formatTipMenuText(username) {
     if (nlen > maxNameLen) maxNameLen = nlen;
   }
 
-  for (var i = 0; i < rawItems.length; i++) {
+  for (i = 0; i < rawItems.length; i++) {
     var item = rawItems[i];
     var name = String(item[0] || '').trim();
     var desc = String(item[1] || '').trim();
@@ -572,7 +572,7 @@ function buildProgressBarText(tips, goal, style, textMode, offset, animateTick) 
     var emptyCount = BAR_CHAR_COUNT - fillCount;
     var barStr = '';
     for (var i = 0; i < fillCount; i++) barStr += style.fillChar;
-    for (var i = 0; i < emptyCount; i++) barStr += style.emptyChar;
+    for (i = 0; i < emptyCount; i++) barStr += style.emptyChar;
     rawText = barStr + ' ' + shortPct;
   }
 
@@ -601,8 +601,8 @@ function buildProgressBarText(tips, goal, style, textMode, offset, animateTick) 
         var invFillCount = Math.round(BAR_CHAR_COUNT * (100 - pct) / 100);
         var invEmptyCount = BAR_CHAR_COUNT - invFillCount;
         var invBar = '';
-        for (var i = 0; i < invFillCount; i++) invBar += style.emptyChar;
-        for (var i = 0; i < invEmptyCount; i++) invBar += style.fillChar;
+        for (i = 0; i < invFillCount; i++) invBar += style.emptyChar;
+        for (i = 0; i < invEmptyCount; i++) invBar += style.fillChar;
         rawText = invBar + ' ' + shortPct;
       }
     }
