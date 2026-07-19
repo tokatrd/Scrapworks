@@ -218,6 +218,7 @@ var TOP_TIPPER_KEY = 'topTipper';
 var TOP_TIP_TOKENS_KEY = 'topTipTokens';
 var SESSION_TIPS_KEY = 'sessionTips';
 var TIP_GOAL_KEY = 'tipGoal';
+var GOAL_REACHED_KEY = 'goalReached'; // Race condition guard (mirrored from shared.js)
 var NEW_FOLLOWERS_KEY = 'newFollowers';
 var SESSION_START_KEY = 'sessionStart';
 var REGULAR_USERS_KEY = 'regularUsers';
@@ -611,6 +612,30 @@ function debouncedReloadPanel() {
 }
 
 // ============================================================
+// Overlay State Sync (mirrored from shared.js)
+// ============================================================
+
+function emitFullStateSync() {
+  if ($settings.overlayEnabled === false) return;
+
+  var tips = $kv.get(SESSION_TIPS_KEY, 0);
+  var goal = $kv.get(TIP_GOAL_KEY, 1000);
+  var pct = goal > 0 ? Math.round((tips / goal) * 100) : 0;
+
+  $overlay.emit('stateSync', {
+    tipGoal: goal,
+    currentTips: tips,
+    percentage: pct,
+    topTipper: $kv.get(TOP_TIPPER_KEY, 'nobody'),
+    topTipTokens: $kv.get(TOP_TIP_TOKENS_KEY, 0),
+    sessionStart: $kv.get(SESSION_START_KEY, 0),
+    hiddenCamActive: $kv.get(HIDDEN_CAM_KEY, false),
+    anonConverterActive: $kv.get(ANON_CONVERTER_KEY, false),
+    followerCount: $room.followerCount || 0,
+  });
+}
+
+// ============================================================
 // Progress Bar Utilities (mirrored from shared.js)
 // ============================================================
 
@@ -942,6 +967,8 @@ function loadHandlers() {
       startNotificationAutoTimer();
     }
     notifyBroadcaster(APP_NAME + ' v' + APP_VERSION + ' started.');
+    // Send full state to overlay for reconnect handling (mirrored from app-start.js)
+    emitFullStateSync();
   };
 
   onAppStop = function () {
@@ -1227,9 +1254,14 @@ function loadHandlers() {
     if ($tip.message) tipText += ' "' + $tip.message + '"';
     addNotification(tipText, 'tip', 'event');
     if (tips >= goal) {
-      $room.sendNotice('Tip goal reached! Total: ' + tips + ' tokens! Thank you everyone!');
-      $kv.set(SESSION_TIPS_KEY, 0);
-      if ($settings.overlayEnabled !== false) $overlay.emit('goalReached', { total: tips });
+      if ($kv.get(GOAL_REACHED_KEY, false)) {
+        // Already fired, skip to prevent double-fire
+      } else {
+        $room.sendNotice('Tip goal reached! Total: ' + tips + ' tokens! Thank you everyone!');
+        $kv.set(SESSION_TIPS_KEY, 0);
+        $kv.set(GOAL_REACHED_KEY, true);
+        if ($settings.overlayEnabled !== false) $overlay.emit('goalReached', { total: tips });
+      }
     }
     debouncedReloadPanel();
     if ($settings.overlayEnabled !== false) {

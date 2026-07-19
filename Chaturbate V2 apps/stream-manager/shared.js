@@ -12,6 +12,7 @@ const TOP_TIPPER_KEY = 'topTipper';
 const TOP_TIP_TOKENS_KEY = 'topTipTokens';
 const SESSION_TIPS_KEY = 'sessionTips';
 const TIP_GOAL_KEY = 'tipGoal';
+const GOAL_REACHED_KEY = 'goalReached'; // Race condition guard: prevents double-fire when multiple tips cross goal simultaneously
 const NEW_FOLLOWERS_KEY = 'newFollowers';
 const SESSION_START_KEY = 'sessionStart';
 const REGULAR_USERS_KEY = 'regularUsers';
@@ -452,6 +453,31 @@ function debouncedReloadPanel() {
   $callback.cancel(PANEL_RELOAD_DEBOUNCE_LABEL);
   // Schedule a single panel reload in 1 second
   $callback.create(PANEL_RELOAD_DEBOUNCE_LABEL, 1, false);
+}
+
+// ============================================================
+// Overlay State Sync — sends full current state to overlay
+// Used to re-establish state when OBS overlay reconnects
+// ============================================================
+
+function emitFullStateSync() {
+  if ($settings.overlayEnabled === false) return;
+
+  var tips = $kv.get(SESSION_TIPS_KEY, 0);
+  var goal = $kv.get(TIP_GOAL_KEY, 1000);
+  var pct = goal > 0 ? Math.round((tips / goal) * 100) : 0;
+
+  $overlay.emit('stateSync', {
+    tipGoal: goal,
+    currentTips: tips,
+    percentage: pct,
+    topTipper: $kv.get(TOP_TIPPER_KEY, 'nobody'),
+    topTipTokens: $kv.get(TOP_TIP_TOKENS_KEY, 0),
+    sessionStart: $kv.get(SESSION_START_KEY, 0),
+    hiddenCamActive: $kv.get(HIDDEN_CAM_KEY, false),
+    anonConverterActive: $kv.get(ANON_CONVERTER_KEY, false),
+    followerCount: $room.followerCount || 0,
+  });
 }
 
 // ============================================================

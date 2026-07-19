@@ -325,6 +325,13 @@
 
   // Exposed event handlers for the $overlay.on() system
   window.__overlayEvents = {
+    onStateSync: function (data) {
+      if (!data) return;
+      // Re-establish full state on reconnect
+      if (typeof data.currentTips === 'number') {
+        updateBar(data.currentTips, data.tipGoal || goal);
+      }
+    },
     onTip: function (data) {
       if (data && typeof data.total === 'number') {
         updateBar(data.total, data.goal || goal);

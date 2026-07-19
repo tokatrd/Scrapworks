@@ -25,12 +25,18 @@ onTipReceived = function () {
     $kv.set('anonTipTokens', anonTips);
   }
 
-  // Check goal reached
+// Check goal reached (with race condition guard)
   if (tips >= goal) {
+    // Guard against double-fire when multiple tips cross goal simultaneously
+    if ($kv.get(GOAL_REACHED_KEY, false)) {
+      // Already fired, just skip but don't reset
+      return;
+    }
     $room.sendNotice(
       'Tip goal reached! Total: ' + tips + ' tokens! Thank you everyone!'
     );
     $kv.set(SESSION_TIPS_KEY, 0); // reset counter
+    $kv.set(GOAL_REACHED_KEY, true); // prevent double-fire
     if ($settings.overlayEnabled !== false) {
       $overlay.emit('goalReached', { total: tips });
     }

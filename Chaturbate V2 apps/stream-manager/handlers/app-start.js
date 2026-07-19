@@ -27,4 +27,7 @@ onAppStart = function () {
   }
 
   notifyBroadcaster(APP_NAME + ' v' + APP_VERSION + ' started.');
+
+  // Send full state to overlay for reconnect handling
+  emitFullStateSync();
 };
