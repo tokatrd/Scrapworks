@@ -48,8 +48,8 @@ onTipReceived = function () {
     }
   }
 
-  // Update panel
-  $room.reloadPanel();
+  // Update panel (debounced to prevent flickering in tip storms)
+  debouncedReloadPanel();
 
   // Add rolling notification (single source of public tip announcements)
   var tipText = ($tip.isAnon ? 'Someone' : $user.username)

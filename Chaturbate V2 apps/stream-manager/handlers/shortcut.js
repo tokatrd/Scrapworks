@@ -14,7 +14,7 @@ onShortcut = function () {
     'Top tipper: ' + topTipper,
   ];
   if (hiddenCam) {
-    var excluded = $room.users.length - $limitcam.users.length;
+    var excluded = $room.users.length - (($limitcam.users || []).length);
     parts.push('Hidden cam: ON (' + excluded + ' excluded)');
   }
   $room.sendNotice(parts.join(' | '), { toUsername: $user.username });

@@ -28,10 +28,12 @@ if (cmd === '!commands') {
     var tips = $kv.get(SESSION_TIPS_KEY, 0);
     var goal = $kv.get(TIP_GOAL_KEY, 1000);
     var pct = goal > 0 ? Math.round((tips / goal) * 100) : 0;
-    $room.sendNotice(
-      'Tip goal: ' + tips + ' / ' + goal + ' (' + pct + '%)',
-      { toUsername: $user.username }
-    );
+    var anonTips = $kv.get('anonTipTokens', 0);
+    var msg = 'Tip goal: ' + tips + ' / ' + goal + ' (' + pct + '%)';
+    if (anonTips > 0) {
+      msg += ' | Anon: ' + anonTips;
+    }
+    $room.sendNotice(msg, { toUsername: $user.username });
     return;
   }
 
@@ -41,7 +43,7 @@ if (cmd === '!commands') {
 
     if (!sub) {
       var active = $kv.get(HIDDEN_CAM_KEY, false);
-      var excluded = active ? ($room.users.length - $limitcam.users.length) : 0;
+      var excluded = active ? ($room.users.length - (($limitcam.users || []).length)) : 0;
       var price = $kv.get(HIDDEN_CAM_PRICE_KEY, DEFAULT_HIDDEN_CAM_PRICE);
       $room.sendNotice(
         'Hidden cam: ' + (active ? 'ACTIVE' : 'OFF') +
@@ -103,10 +105,12 @@ if (cmd === '!commands') {
       var duration = $settings.anonConverterBlackoutDuration || DEFAULT_ANON_DURATION;
       var bl = getAnonBlacklist();
       var anonCount = $room.anonCount || 0;
+      var anonTips = $kv.get('anonTipTokens', 0);
       $room.sendNotice(
         'Anon Converter: ' + (active ? 'ON' : 'OFF') +
         (blackout ? ' (BLACKOUT ACTIVE)' : '') +
         ' | Interval: ' + interval + 's | Duration: ' + duration + 's | Anons: ' + anonCount +
+        ' | Anon tips: ' + anonTips +
         ' | Blacklisted: ' + bl.length,
         { toUsername: $user.username }
       );
@@ -147,6 +151,7 @@ if (cmd === '!commands') {
       var dur = Number(arg);
       if (!dur || dur < 1) { $room.sendNotice('Duration must be a number >= 1 second.', { toUsername: $user.username }); return; }
       $settings.anonConverterBlackoutDuration = dur;
+      $kv.set(ANON_CONVERTER_DURATION_KEY, dur);
       $room.sendNotice('Anon converter blackout duration set to ' + dur + 's.', { toUsername: $user.username });
       return;
     }

@@ -36,4 +36,10 @@ onCallback = function () {
     doNotificationAutoTick();
     return;
   }
+
+  // Debounced panel reload
+  if (label === PANEL_RELOAD_DEBOUNCE_LABEL) {
+    $room.reloadPanel();
+    return;
+  }
 };

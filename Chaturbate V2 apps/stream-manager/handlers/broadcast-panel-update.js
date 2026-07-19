@@ -28,7 +28,7 @@ onBroadcastPanelUpdate = function () {
   if (view === 0) {
     // View 0: Tips / [Progress Bar] / Top Tipper
     if (hiddenCam) {
-      var excluded = $room.users.length - $limitcam.users.length;
+      var excluded = $room.users.length - (($limitcam.users || []).length);
       row3_label = 'Hidden Cam';
       row3_value = 'ON (' + excluded + ' excl)';
     } else {

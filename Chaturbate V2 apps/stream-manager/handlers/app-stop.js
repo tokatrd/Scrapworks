@@ -15,6 +15,9 @@ onAppStop = function () {
   // Stop panel cycle
   stopPanelCycle();
 
+  // Stop notification auto timer
+  stopNotificationAutoTimer();
+
   var tips = $kv.get(SESSION_TIPS_KEY, 0);
   var top = $kv.get(TOP_TIPPER_KEY, 'nobody');
 
