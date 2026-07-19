@@ -36,6 +36,40 @@ A broadcaster utility that monitors room activity, tracks tip goals, manages vie
 5. (Optional) Upload `overlay.html` in the Broadcast Overlays section
 6. Required permissions: Broadcast panel, Tip options, Transform messages
 
+## Automated Deployment
+
+```bash
+# Install dependencies (one-time)
+npm install
+
+# ── First-time login ──────────────────────────────────
+npm run deploy:login
+#   → Playwright opens Chromium (with stealth — no captcha!)
+#   → Log into devportal.cb.dev in the Chromium window
+#   → Profile saved to .chromium-profile/ permanently
+
+# ── Deploy all files (after login) ────────────────────
+npm run deploy
+
+# ── Other options ─────────────────────────────────────
+npm run deploy:dry         # preview what would upload
+npm run deploy:shared      # upload shared.js only
+```
+
+The deploy script (`deploy.mjs`) uses **Playwright's Chromium** with stealth techniques to bypass Cloudflare, plus a persistent profile (`.chromium-profile/`):
+1. **First run**: `--login` opens Chromium headed — you log into devportal once, profile saved to disk
+2. **Subsequent runs**: headless Chromium deploy using same profile — cookies persist, no re-login
+3. Uploads all 22 files to their respective IDE tabs
+4. Clicks Save (or you can manually save)
+
+> **Note**: Cloudflare's bot detection blocks vanilla Playwright Chromium.
+> The script hides automation fingerprints via launch flags and init scripts.
+
+Set the `CB_APP_ID` environment variable or edit `APP_ID` in `deploy.mjs`:
+```bash
+CB_APP_ID="e97a220d-0000-0000-0000-000000000000" npm run deploy
+```
+
 ## Simulator
 
 ```bash
@@ -52,6 +86,8 @@ Runs a full event sequence locally without deploying to the testbed. Covers:
 - Context-aware reply notifications (greeting, compliment, question, request, farewell, excitement)
 - Tip leaderboard (`!top`)
 - Rolling notification queue
+
+**Deterministic**: The simulator overrides `Date.now` and `Math.random` with seeded mocks, so every run produces identical output. This enables diff-based regression testing between versions.
 
 ## Settings
 
@@ -132,7 +168,7 @@ shared.js  ──→  Utility functions, discount engine, anon converter lifecyc
 | `!hiddencam` | Show hidden cam status | Everyone |
 | `!hiddencam on/off` | Toggle hidden cam | Broadcaster only |
 | `!hiddencam add/remove <user>` | Manage hidden cam access | Broadcaster only |
-| `!anon` | Show anon converter status | Everyone |
+| `!anon` | Show anon converter status + anon tip total | Everyone |
 | `!anon on/off` | Toggle anon converter | Broadcaster only |
 | `!anon interval <sec>` | Set blackout interval | Broadcaster only |
 | `!anon duration <sec>` | Set blackout duration | Broadcaster only |
@@ -157,7 +193,8 @@ This app was developed with assistance from the following AI models and agents:
 | Handler implementation | Claude (Anthropic) | Wrote handler logic for all 18 event handlers + overlay.html |
 | Simulator | Claude (Anthropic) | Built the Node.js simulation environment with mocked globals |
 | Settings schema | Claude (Anthropic) | Defined 30+ settings in IDE-compatible format |
-| Final audit & review | pi coding agent (2026-07-16) | Systematic bug hunt, optimization pass, documentation update |
+| Audit & bug fixes (v1.0.0) | pi coding agent (2026-07-16) | Systematic bug hunt, optimization pass, documentation update |
+| Audit & fixes (v1.1.0) | pi coding agent (2026-07-16) | Fixed `!anon duration` KV persistence, missing `stopNotificationAutoTimer`, panel reload debouncing, anon tip visibility, simulator drift, deterministic simulator |
 
 **Verification methodology**: All API objects, properties, and methods verified against official TypeScript type definitions extracted from the IDE JS bundle (Portal v0.102.0). See `AGENTS.md` for the definitive reference.
 
