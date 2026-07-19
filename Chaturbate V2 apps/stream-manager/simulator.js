@@ -6,6 +6,24 @@
 
 'use strict';
 
+// ── Deterministic mocks for reproducible simulation runs ──
+// Override Date.now and Math.random so every run produces identical output.
+// This enables regression testing by diffing against a reference run.
+
+var _mockTime = 1700000000000; // fixed base timestamp (Nov 14, 2023)
+var _seed = 42;
+
+Date.now = function () {
+  _mockTime += 1000; // increment by 1 second per call
+  return _mockTime;
+};
+
+Math.random = function () {
+  // Park-Miller LCG for reproducible pseudo-random numbers
+  _seed = (_seed * 16807) % 2147483647;
+  return (_seed - 1) / 2147483646;
+};
+
 // ── Helpers ──
 
 var noticedLog = [];
@@ -194,7 +212,7 @@ var $limitcam = { active: false, users: [], add: function (u) { if (Array.isArra
 // ── Handler function definitions (mirroring stream-manager handlers) ──
 
 var APP_NAME = 'Stream Manager';
-var APP_VERSION = '1.0.0';
+var APP_VERSION = '1.2.0';
 var SUPPORTED_SHOW_TYPES = ['public', 'private', 'hidden'];
 var TOP_TIPPER_KEY = 'topTipper';
 var TOP_TIP_TOKENS_KEY = 'topTipTokens';
@@ -221,6 +239,7 @@ var PANEL_VIEW_KEY = 'panelCurrentView';
 var ANON_BLACKLIST_KEY = 'anonBlacklist';
 var NOTIFICATION_QUEUE_KEY = 'notificationQueue';
 var NOTIFICATION_AUTO_LABEL = 'notificationAutoTick';
+var PANEL_RELOAD_DEBOUNCE_LABEL = 'panelReloadDebounce';
 
 // Progress bar constants (mirrored from shared.js)
 var PROGRESS_STYLE_KEY = 'progressStyle';
@@ -501,7 +520,10 @@ function doAnonConverterBlackout() {
 
 function doAnonConverterRestore() {
   if (!$kv.get(ANON_CONVERTER_BLACKOUT_KEY, false)) return;
-  $limitcam.stop();
+  // Don't stop limitcam if hidden cam is active — it was started independently
+  if (!$kv.get(HIDDEN_CAM_KEY, false)) {
+    $limitcam.stop();
+  }
   $kv.set(ANON_CONVERTER_BLACKOUT_KEY, false);
   notifyBroadcaster('Anon Converter: cam feed restored.');
   if ($settings.overlayEnabled !== false) $overlay.emit('anonRestore', {});
@@ -531,6 +553,11 @@ function doPanelCycleTick() {
 // ============================================================
 function startHiddenCam(message) {
   if ($room.status === 'offline') { notifyBroadcaster('Cannot start hidden cam while offline.'); return false; }
+  // Don't start hidden cam during anon converter blackout
+  if ($kv.get(ANON_CONVERTER_BLACKOUT_KEY, false)) {
+    notifyBroadcaster('Cannot start hidden cam while anon converter blackout is active.');
+    return false;
+  }
   var msg = message || $settings.hiddenCamMessage || '';
   $limitcam.start(msg);
   $kv.set(HIDDEN_CAM_KEY, true);
@@ -569,10 +596,18 @@ function notifyBroadcaster(message, options) {
 }
 
 function incrCounter(key, amount) {
-  var val = $kv.get(key, 0);
-  val += typeof amount === 'number' ? amount : 1;
-  $kv.set(key, val);
-  return val;
+  // Use atomic increment (matching shared.js pattern)
+  $kv.incr(key, typeof amount === 'number' ? amount : 1);
+  return $kv.get(key, 0);
+}
+
+// ============================================================
+// Debounced Panel Reload (mirrored from shared.js)
+// ============================================================
+
+function debouncedReloadPanel() {
+  $callback.cancel(PANEL_RELOAD_DEBOUNCE_LABEL);
+  $callback.create(PANEL_RELOAD_DEBOUNCE_LABEL, 1, false);
 }
 
 // ============================================================
@@ -669,13 +704,15 @@ function buildPanelTable(row1_label, row1_value, progressText, row3_label, row3_
 
 function getNextScrollOffset() {
   var off = $kv.get(PROGRESS_SCROLL_KEY, 0);
-  $kv.set(PROGRESS_SCROLL_KEY, off + 1);
+  // Wrap at 1000 to prevent unbounded KV growth (mirrors shared.js)
+  $kv.set(PROGRESS_SCROLL_KEY, (off + 1) % 1000);
   return off;
 }
 
 function getNextAnimateTick() {
   var tick = $kv.get(PROGRESS_ANIMATE_KEY, 0);
-  $kv.set(PROGRESS_ANIMATE_KEY, tick + 1);
+  // Wrap at 100 to prevent unbounded KV growth (mirrors shared.js)
+  $kv.set(PROGRESS_ANIMATE_KEY, (tick + 1) % 100);
   return tick;
 }
 
@@ -858,6 +895,16 @@ function resetNotificationSettings() {
   $settings.notificationAutoIntervalMax = 300;
   $settings.notificationReplyEnabled = true;
   $settings.overlayNotificationsEnabled = false;
+  // Reset templates to built-in defaults (mirrors shared.js)
+  var defaults = NOTIFICATION_DEFAULTS.map(function(e) {
+    return [e.type, e.template, String(e.weight)];
+  });
+  $settings.notificationTemplates = defaults;
+  // Reset reply templates
+  var replyDefaults = REPLY_TEMPLATES.map(function(e) {
+    return [e.type, e.template, String(e.weight)];
+  });
+  $settings.notificationReplyTemplates = replyDefaults;
   clearNotificationQueue();
   stopNotificationAutoTimer();
   if ($settings.notificationAutoEnabled) startNotificationAutoTimer();
@@ -975,7 +1022,10 @@ function loadHandlers() {
       var tips = $kv.get(SESSION_TIPS_KEY, 0);
       var goal = $kv.get(TIP_GOAL_KEY, 1000);
       var pct = goal > 0 ? Math.round((tips / goal) * 100) : 0;
-      $room.sendNotice('Tip goal: ' + tips + ' / ' + goal + ' (' + pct + '%)', { toUsername: $user.username });
+      var anonTips = $kv.get('anonTipTokens', 0);
+      var msg = 'Tip goal: ' + tips + ' / ' + goal + ' (' + pct + '%)';
+      if (anonTips > 0) msg += ' | Anon: ' + anonTips;
+      $room.sendNotice(msg, { toUsername: $user.username });
       return;
     }
     if (cmd === '!hiddencam') {
@@ -983,7 +1033,7 @@ function loadHandlers() {
       var arg = parts.slice(2).join(' ');
       if (!sub) {
         var active = $kv.get(HIDDEN_CAM_KEY, false);
-        var excluded = active ? ($room.users.length - $limitcam.users.length) : 0;
+        var excluded = active ? ($room.users.length - (($limitcam.users || []).length)) : 0;
         $room.sendNotice('Hidden cam: ' + (active ? 'ACTIVE' : 'OFF') + (active ? ' (' + excluded + ' users excluded, auto-access at ' + $kv.get(HIDDEN_CAM_PRICE_KEY, DEFAULT_HIDDEN_CAM_PRICE) + '+ tks)' : ''), { toUsername: $user.username });
         return;
       }
@@ -1017,11 +1067,13 @@ function loadHandlers() {
         var interval = $kv.get(ANON_CONVERTER_INTERVAL_KEY, DEFAULT_ANON_INTERVAL);
         var duration = $kv.get(ANON_CONVERTER_DURATION_KEY, DEFAULT_ANON_DURATION);
         var blacklist = getAnonBlacklist();
+        var anonTips = $kv.get('anonTipTokens', 0);
         $room.sendNotice(
           'Anon Converter: ' + (active ? 'ON' : 'OFF') +
           (blackout ? ' (BLACKOUT ACTIVE)' : '') +
           ' | Interval: ' + interval + 's | Duration: ' + duration + 's' +
           ' | Anons: ' + $room.anonCount +
+          ' | Anon tips: ' + anonTips +
           ' | Blacklisted: ' + blacklist.length,
           { toUsername: $user.username }
         );
@@ -1179,7 +1231,7 @@ function loadHandlers() {
       $kv.set(SESSION_TIPS_KEY, 0);
       if ($settings.overlayEnabled !== false) $overlay.emit('goalReached', { total: tips });
     }
-    $room.reloadPanel();
+    debouncedReloadPanel();
     if ($settings.overlayEnabled !== false) {
       $overlay.emit('tip', {
         username: $tip.isAnon ? 'Anonymous' : $user.username,
@@ -1226,7 +1278,7 @@ function loadHandlers() {
 
     if (view === 0) {
       if (hiddenCam) {
-        var excluded = $room.users.length - $limitcam.users.length;
+        var excluded = $room.users.length - (($limitcam.users || []).length);
         row3_label = 'Hidden Cam';
         row3_value = 'ON (' + excluded + ' excl)';
       } else {
@@ -1283,6 +1335,7 @@ function loadHandlers() {
     if (label === ANON_CONVERTER_RESTORE_LABEL) { doAnonConverterRestore(); return; }
     if (label === PANEL_CYCLE_LABEL) { doPanelCycleTick(); return; }
     if (label === NOTIFICATION_AUTO_LABEL) { doNotificationAutoTick(); return; }
+    if (label === PANEL_RELOAD_DEBOUNCE_LABEL) { $room.reloadPanel(); return; }
   };
 
   onShortcut = function () {
@@ -1294,7 +1347,7 @@ function loadHandlers() {
     var hiddenCam = $kv.get(HIDDEN_CAM_KEY, false);
     var parts = ['Tip Goal: ' + tips + ' / ' + goal + ' (' + pct + '%)', 'Top tipper: ' + topTipper];
     if (hiddenCam) {
-      var excluded = $room.users.length - $limitcam.users.length;
+      var excluded = $room.users.length - (($limitcam.users || []).length);
       parts.push('Hidden cam: ON (' + excluded + ' excluded)');
     }
     $room.sendNotice(parts.join(' | '), { toUsername: $user.username });

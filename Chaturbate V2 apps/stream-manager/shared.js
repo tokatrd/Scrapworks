@@ -4,7 +4,7 @@
 // ============================================================
 
 const APP_NAME = 'Stream Manager';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.2.0';
 const SUPPORTED_SHOW_TYPES = ['public', 'private', 'hidden'];
 
 // ── Goal & Session Keys ──
@@ -177,12 +177,13 @@ function formatTipMenuText(username) {
     if (!name || basePrice <= 0) continue;
 
     var priceInfo = getDiscountedPrice(name, basePrice, username, rawDiscounts);
-    var parts = [name + ':'];
-    for (var p = name.length; p < maxNameLen + 1; p++) parts.push(' ');
-    parts[0] += ' ' + priceInfo.price + ' tks';
-    if (desc) parts[0] += ' — ' + desc;
-    if (priceInfo.isDiscounted) parts[0] += ' (was ' + basePrice + ', -' + priceInfo.discountPct + '%)';
-    lines.push(parts[0]);
+    // Pad name to align columns
+    var paddedName = name + ':';
+    for (var p = name.length; p < maxNameLen; p++) paddedName += ' ';
+    var line = paddedName + priceInfo.price + ' tks';
+    if (desc) line += ' — ' + desc;
+    if (priceInfo.isDiscounted) line += ' (was ' + basePrice + ', -' + priceInfo.discountPct + '%)';
+    lines.push(line);
   }
 
   return lines.join(' | ');
@@ -299,6 +300,11 @@ function startHiddenCam(message) {
     notifyBroadcaster('Cannot start hidden cam while offline.');
     return false;
   }
+  // Don't start hidden cam during anon converter blackout
+  if ($kv.get(ANON_CONVERTER_BLACKOUT_KEY, false)) {
+    notifyBroadcaster('Cannot start hidden cam while anon converter blackout is active.');
+    return false;
+  }
   var msg = message || $settings.hiddenCamMessage || '';
   $limitcam.start(msg);
   $kv.set(HIDDEN_CAM_KEY, true);
@@ -404,7 +410,10 @@ function doAnonConverterBlackout() {
 function doAnonConverterRestore() {
   if (!$kv.get(ANON_CONVERTER_BLACKOUT_KEY, false)) return;
 
-  $limitcam.stop();
+  // Don't stop limitcam if hidden cam is active — it was started independently
+  if (!$kv.get(HIDDEN_CAM_KEY, false)) {
+    $limitcam.stop();
+  }
   $kv.set(ANON_CONVERTER_BLACKOUT_KEY, false);
 
   notifyBroadcaster('Anon Converter: cam feed restored.');
@@ -430,6 +439,19 @@ function incrCounter(key, amount) {
   // Use atomic increment to avoid race conditions
   $kv.incr(key, typeof amount === 'number' ? amount : 1);
   return $kv.get(key, 0);
+}
+
+// ============================================================
+// Debounced Panel Reload — prevents flickering in tip storms
+// ============================================================
+
+const PANEL_RELOAD_DEBOUNCE_LABEL = 'panelReloadDebounce';
+
+function debouncedReloadPanel() {
+  // Cancel any pending reload to reset the debounce timer
+  $callback.cancel(PANEL_RELOAD_DEBOUNCE_LABEL);
+  // Schedule a single panel reload in 1 second
+  $callback.create(PANEL_RELOAD_DEBOUNCE_LABEL, 1, false);
 }
 
 // ============================================================
